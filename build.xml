@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="dslab16" default="compile" basedir=".">
+
+	<property name="src.dir" value="src/main/java" />
+	<property name="src.resources.dir" value="src/main/resources" />
+	<property name="test.src.dir" value="src/test/java" />
+	<property name="test.resources.dir" value="src/test/resources" />
+	<property name="build.dir" value="build" />
+	<property name="reports.dir" value="reports" />
+
+	<path id="project.classpath">
+		<pathelement location="${build.dir}" />
+		<pathelement location="lib/bcprov-jdk16-140.jar" />
+		<pathelement location="lib/commons-logging-1.1.3.jar" />
+		<pathelement location="lib/hamcrest-core-1.3.jar" />
+		<pathelement location="lib/junit-4.11.jar" />
+		<pathelement location="lib/spring-core-4.1.0.RELEASE.jar" />
+		<pathelement location="lib/spring-expression-4.1.0.RELEASE.jar" />
+	</path>
+
+	<target name="compile" description="Compile project.">
+		<mkdir dir="${build.dir}" />
+		<javac srcdir="${src.dir};${test.src.dir}" destdir="${build.dir}" classpathref="project.classpath" debug="true" deprecation="true" includeantruntime="false" />
+		<copy todir="${build.dir}">
+			<fileset dir="${src.resources.dir}">
+				<include name="*.properties" />
+			</fileset>
+			<fileset dir="${test.resources.dir}">
+				<include name="*.txt" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="test" description="Test the solution" depends="compile">
+		<mkdir dir="${reports.dir}" />
+		<junit includeantruntime="true" logfailedtests="true" showoutput="true" printsummary="true">
+			<classpath refid="project.classpath" />
+			<formatter type="plain" />
+			<batchtest fork="false" todir="${reports.dir}">
+				<fileset dir="${test.src.dir}">
+					<include name="**/*Test.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+
+	<target name="run-server" depends="compile" description="Run Chatserver.">
+		<java classname="chatserver.Chatserver" fork="true" classpathref="project.classpath">
+			<arg value="chatserver" />
+		</java>
+	</target>
+
+	<target name="run-client" depends="compile" description="Run Client.">
+		<java classname="client.Client" fork="true" classpathref="project.classpath">
+			<arg value="client" />
+		</java>
+	</target>
+
+	<target name="run-ns-root" depends="compile" description="Run Nameserver: root.">
+		<java classname="nameserver.Nameserver" fork="true" classpathref="project.classpath">
+			<arg value="ns-root" />
+		</java>
+	</target>
+
+	<target name="run-ns-at" depends="compile" description="Run Nameserver: at.">
+		<java classname="nameserver.Nameserver" fork="true" classpathref="project.classpath">
+			<arg value="ns-at" />
+		</java>
+	</target>
+
+	<target name="run-ns-de" depends="compile" description="Run Nameserver: de.">
+		<java classname="nameserver.Nameserver" fork="true" classpathref="project.classpath">
+			<arg value="ns-de" />
+		</java>
+	</target>
+
+	<target name="run-ns-vienna" depends="compile" description="Run Nameserver: vienna.at.">
+		<java classname="nameserver.Nameserver" fork="true" classpathref="project.classpath">
+			<arg value="ns-vienna-at" />
+		</java>
+	</target>
+
+	<target name="clean" description="Clean build products.">
+		<delete dir="${build.dir}" />
+		<delete dir="${reports.dir}" />
+	</target>
+
+	<target name="rebuild" depends="clean, compile" description="Clean and build products." />
+</project>
