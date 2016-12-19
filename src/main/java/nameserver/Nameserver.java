@@ -20,6 +20,7 @@ public class Nameserver implements INameserverCli, Runnable {
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
 	private TreeMap<String, NSConfig> registry;
+	private String[] knownconfigs = new String[] {"ns-at", "ns-de", "ns-vienna-at"};
 
 	/**
 	 * @param componentName
@@ -39,7 +40,7 @@ public class Nameserver implements INameserverCli, Runnable {
 		this.userResponseStream = userResponseStream;
 
 		this.registry = new TreeMap<>();
-		readConfig();
+		readConfig("ns-root");
 	}
 
 	@Override
@@ -65,12 +66,35 @@ public class Nameserver implements INameserverCli, Runnable {
 		return null;
 	}
 
-	private void readConfig() {
-		String[] server = new String[] {"ns-root", "ns-at", "ns-de", "ns-vienna-at"};
-		for (String serverkey : server) {
-			Config ns = new Config(serverkey);
-			registry.put(serverkey, new NSConfig(serverkey, ns.getString("root_id"), ns.getString("registry.host"),
-					ns.getInt("registry.port"), ns.listKeys().contains("domain") ? ns.getString("domain") : null));
+	private void readConfig(String configname) {
+		Config nsroot = new Config("ns-root");
+		/* add root */
+		registry.put("ns-root", new NSConfig("ns-root", nsroot.getString("root_id"),
+				nsroot.getString("registry.host"), nsroot.getInt("registry.port"), null));
+		Config nsat = new Config("ns-at");
+		/* add at */
+		registry.get("ns-root").register("ns-at",
+				new NSConfig("ns-at", nsat.getString("root_id"), nsat.getString("registry.host"),
+						nsat.getInt("registry.port"), nsat.getString("domain")));
+		Config nsde = new Config("ns-de");
+		/* add de */
+		registry.get("ns-root").register("ns-de",
+				new NSConfig("ns-de", nsde.getString("root_id"),
+						nsde.getString("registry.host"), nsde.getInt("registry.port"), nsde.getString("domain")));
+		Config nsviennaat = new Config("ns-vienna-at");
+		/* add vienna at */
+		registry.get("ns-root").getNameserver("ns-at").register("ns-vienna-at",
+				new NSConfig("ns-vienna-at", nsviennaat.getString("root_id"),
+						nsviennaat.getString("registry.host"), nsviennaat.getInt("registry.port"), nsviennaat.getString("domain")));
+
+		for (String i : registry.keySet()) {
+			System.out.println("Ebene 0: " + registry.get(i));
+			for (String j : registry.get(i).getNameservers().keySet()) {
+				System.out.println("Ebene 1: " + registry.get(i).getNameservers().get(j));
+				for (String k : registry.get(i).getNameservers().get(j).getNameservers().keySet()) {
+					System.out.println("Ebene 2: " + registry.get(i).getNameservers().get(j).getNameservers().get(k));
+				}
+			}
 		}
 	}
 
