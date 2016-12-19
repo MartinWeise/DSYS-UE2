@@ -19,7 +19,7 @@ public class Nameserver implements INameserverCli, Runnable {
 
 	/**
 	 * @param componentName
-	 *            the name of the component - represented in the prompt
+	 *            the name of the componentant - represented in the prompt
 	 * @param config
 	 *            the configuration to use
 	 * @param userRequestStream
