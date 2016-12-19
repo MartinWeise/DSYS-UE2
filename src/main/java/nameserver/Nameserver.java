@@ -3,8 +3,11 @@ package nameserver;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.Hashtable;
+import java.util.TreeMap;
 
 import util.Config;
+import util.NSConfig;
 
 /**
  * Please note that this class is not needed for Lab 1, but will later be used
@@ -16,6 +19,7 @@ public class Nameserver implements INameserverCli, Runnable {
 	private Config config;
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
+	private TreeMap<String, NSConfig> registry;
 
 	/**
 	 * @param componentName
@@ -34,7 +38,8 @@ public class Nameserver implements INameserverCli, Runnable {
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
 
-		// TODO
+		this.registry = new TreeMap<>();
+		readConfig();
 	}
 
 	@Override
@@ -60,6 +65,15 @@ public class Nameserver implements INameserverCli, Runnable {
 		return null;
 	}
 
+	private void readConfig() {
+		String[] server = new String[] {"ns-root", "ns-at", "ns-de", "ns-vienna-at"};
+		for (String serverkey : server) {
+			Config ns = new Config(serverkey);
+			registry.put(serverkey, new NSConfig(serverkey, ns.getString("root_id"), ns.getString("registry.host"),
+					ns.getInt("registry.port"), ns.listKeys().contains("domain") ? ns.getString("domain") : null));
+		}
+	}
+
 	/**
 	 * @param args
 	 *            the first argument is the name of the {@link Nameserver}
@@ -69,6 +83,7 @@ public class Nameserver implements INameserverCli, Runnable {
 		Nameserver nameserver = new Nameserver(args[0], new Config(args[0]),
 				System.in, System.out);
 		// TODO: start the nameserver
+		nameserver.run();
 	}
 
 }
