@@ -3,11 +3,22 @@ package nameserver;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.util.Hashtable;
-import java.util.TreeMap;
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
+import cli.Command;
+import cli.Shell;
+import nameserver.exceptions.AlreadyRegisteredException;
+import nameserver.exceptions.InvalidDomainException;
 import util.Config;
-import util.NSConfig;
 
 /**
  * Please note that this class is not needed for Lab 1, but will later be used
@@ -19,8 +30,11 @@ public class Nameserver implements INameserverCli, Runnable {
 	private Config config;
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
-	private TreeMap<String, NSConfig> registry;
-	private String[] knownconfigs = new String[] {"ns-at", "ns-de", "ns-vienna-at"};
+
+	private Shell shell;
+	private NameserverConfig nameserver;
+	private Registry registry;
+	private ConcurrentHashMap<String, INameserver> subzones;
 
 	/**
 	 * @param componentName
@@ -38,64 +52,60 @@ public class Nameserver implements INameserverCli, Runnable {
 		this.config = config;
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
-
-		this.registry = new TreeMap<>();
-		readConfig("ns-root");
+		/* register shell */
+		shell = new Shell(componentName, this.userRequestStream, this.userResponseStream);
+		shell.register(this);
 	}
 
+	/**
+	 * Register the root {@link INameserver} and bind the nameserverRemote {@link INameserver} to it
+	 * Mostly from Oracle RMI docs
+	 */
 	@Override
 	public void run() {
-		// TODO
+		try {
+			subzones = new ConcurrentHashMap<>();
+			nameserver = new NameserverConfig(subzones);
+			if (config.listKeys().contains("domain")) {
+				/* component is non-root */
+				registry = LocateRegistry.getRegistry(config.getString("registry.host"), config.getInt("registry.port"));
+				INameserver root = (INameserver) registry.lookup(config.getString("root_id"));
+				INameserver nameserverRemote = (INameserver) UnicastRemoteObject.exportObject(nameserver, 0);
+				root.registerNameserver(config.getString("domain"), nameserverRemote, nameserverRemote);
+			} else {
+				/* component is root */
+				registry = LocateRegistry.createRegistry(config.getInt("registry.port"));
+				INameserver nameserverRemote = (INameserver) UnicastRemoteObject.exportObject(nameserver, 0);
+				registry.bind(config.getString("root_id"), nameserverRemote);
+			}
+		} catch (RemoteException | AlreadyBoundException | NotBoundException
+				| AlreadyRegisteredException | InvalidDomainException e) {
+			throw new RuntimeException(e);
+		}
+		/* start shell */
+		new Thread(shell).start();
+		System.out.println("Component " + componentName + " up and running!");
 	}
 
 	@Override
+	@Command
 	public String nameservers() throws IOException {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
+	@Command
 	public String addresses() throws IOException {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
+	@Command
 	public String exit() throws IOException {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	private void readConfig(String configname) {
-		Config nsroot = new Config("ns-root");
-		/* add root */
-		registry.put("ns-root", new NSConfig("ns-root", nsroot.getString("root_id"),
-				nsroot.getString("registry.host"), nsroot.getInt("registry.port"), null));
-		Config nsat = new Config("ns-at");
-		/* add at */
-		registry.get("ns-root").register("ns-at",
-				new NSConfig("ns-at", nsat.getString("root_id"), nsat.getString("registry.host"),
-						nsat.getInt("registry.port"), nsat.getString("domain")));
-		Config nsde = new Config("ns-de");
-		/* add de */
-		registry.get("ns-root").register("ns-de",
-				new NSConfig("ns-de", nsde.getString("root_id"),
-						nsde.getString("registry.host"), nsde.getInt("registry.port"), nsde.getString("domain")));
-		Config nsviennaat = new Config("ns-vienna-at");
-		/* add vienna at */
-		registry.get("ns-root").getNameserver("ns-at").register("ns-vienna-at",
-				new NSConfig("ns-vienna-at", nsviennaat.getString("root_id"),
-						nsviennaat.getString("registry.host"), nsviennaat.getInt("registry.port"), nsviennaat.getString("domain")));
-
-		for (String i : registry.keySet()) {
-			System.out.println("Ebene 0: " + registry.get(i));
-			for (String j : registry.get(i).getNameservers().keySet()) {
-				System.out.println("Ebene 1: " + registry.get(i).getNameservers().get(j));
-				for (String k : registry.get(i).getNameservers().get(j).getNameservers().keySet()) {
-					System.out.println("Ebene 2: " + registry.get(i).getNameservers().get(j).getNameservers().get(k));
-				}
-			}
-		}
 	}
 
 	/**
