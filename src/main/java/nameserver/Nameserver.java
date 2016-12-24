@@ -169,13 +169,16 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 			/* domain is valid */
 			if (domain.contains(".")) {
 				/* domain has subzone */
-				String newDomain = domain.substring(0, domain.lastIndexOf('.'));
+				String zone = domain.substring(0, domain.lastIndexOf('.'));
 				String nameServerDomain = domain.substring(domain.lastIndexOf('.') + 1);
 				INameserver ns = subzones.get(nameServerDomain);
 				if (ns != null) {
-					ns.registerNameserver(newDomain, nameserver, nameserverForChatserver);
+					ns.registerNameserver(zone, nameserver, nameserverForChatserver);
 				}
+			} else if (subzones.containsKey(domain)) {
+				throw new InvalidDomainException("Domain " + domain + " already in use.");
 			} else {
+				userResponseStream.println("Registering nameserver for zone '" + domain + "'");
 				subzones.put(domain, nameserver);
 			}
 		} else {
@@ -206,6 +209,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 	@Override
 	public INameserverForChatserver getNameserver(String zone) throws RemoteException {
 		if (subzones.containsKey(zone)) {
+			userResponseStream.println("Nameserver for '" + zone + "' requested.");
 			return subzones.get(zone);
 		} else {
 			throw new RemoteException("Couldn't find nameserver " + zone + ".");
@@ -214,7 +218,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 
 	@Override
 	public String lookup(String username) throws RemoteException {
-		System.out.println("Lookup called on username " + username);
+		userResponseStream.println("Lookup called on username '" + username + "'");
 		if (users.containsKey(username)) {
 			return users.get(username);
 		} else {

@@ -2,7 +2,6 @@
 
 ## Todo
 
-- [ ] Stage 1 implicite `!lookup` of user
 - [ ] Stage 2
 - [ ] Stage 3
 
@@ -12,4 +11,4 @@
 
 - [x] Stage 1 `!addresses`
 - [x] Stage 1 `!nameservers`
-- [x] Stage 1 explicit `!lookup` of user (testfile exists: `01_`)
+- [x] Stage 1 explicit & implicit `!lookup` of user (testfile exists: `01_`)

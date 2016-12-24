@@ -166,7 +166,9 @@ public class TcpHandler extends Thread {
 								System.out.println(i + ": " + userParts[i]);
 								remotens = remotens.getNameserver(userParts[i]);
 							}
-							response = "private+ " + remotens.lookup(userParts[0].substring(8, userParts[0].length()));
+							String address = remotens.lookup(userParts[0].substring(17, userParts[0].length()));
+							response = "private+ " + address;
+							userResponseStream.println("Resolved implicite lookup '" + address + "'");
 						}
 					} else {
 						/* normal lookup */
