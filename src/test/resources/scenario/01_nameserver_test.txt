@@ -1,0 +1,25 @@
+* Nameserver         ns-root
+* Nameserver         ns-de
+* Nameserver         ns-at
+* Nameserver         ns-vienna-at
+* Chatserver	      chatserver
+* Client		         alice.vienna.at
+
+ns-root:             !nameservers
+>                    verify("1. at\n 2. de")
+
+alice.vienna.at:	   !login alice.vienna.at 12345
+>					      verify("success")
+
+alice.vienna.at:     !register localhost:8000
+>                    verify("for user alice.vienna.at")
+
+alice.vienna.at:     !lookup alice.vienna.at
+>                    verify(".*localhost:8000.*", T(test.util.Flag).REGEX)
+
+chatserver: 		   !exit
+alice.vienna.at:	   !exit
+ns-vienna-at:        !exit
+ns-at:               !exit
+ns-de:               !exit
+ns-root:             !exit

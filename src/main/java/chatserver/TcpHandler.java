@@ -1,11 +1,20 @@
 package chatserver;
 
+import nameserver.INameserver;
+import nameserver.exceptions.AlreadyRegisteredException;
+import nameserver.exceptions.InvalidDomainException;
+import util.Config;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.rmi.NotBoundException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,14 +29,15 @@ public class TcpHandler extends Thread {
 	private TcpListener tL;
 	private UserData d;
 	private boolean end;
+	private Config chatserverConfig;
 
-	public TcpHandler(Socket socket, PrintStream userResponseStream, ConcurrentHashMap<String, UserData> users, TcpListener tL) {
+	public TcpHandler(Config config, Socket socket, PrintStream userResponseStream, ConcurrentHashMap<String, UserData> users, TcpListener tL) {
 		this.socket = socket;
 		this.userResponseStream = userResponseStream;
 		this.users = users;
 		this.tL = tL;
 		this.end = false;
-
+		this.chatserverConfig = config;
 	}
 
 
@@ -127,7 +137,12 @@ public class TcpHandler extends Thread {
 						if(!parts[1].contains(":")) {
 							response = "Wrong address format: <IP:port>";
 						} else {
+							Registry registry = LocateRegistry.getRegistry(chatserverConfig.getString("registry.host"),
+									chatserverConfig.getInt("registry.port"));
+							INameserver rootns = (INameserver) registry.lookup("root_id");
+							rootns.registerUser(d.getUserName(), parts[1]);
 							d.setPrivateAdress(parts[1]);
+							System.err.println("Successfully registered address for " + d.getUserName() + ".");
 							response = "Successfully registered address for " + d.getUserName() + ".";
 						}
 					}
@@ -180,9 +195,8 @@ public class TcpHandler extends Thread {
 				writer.println(response);
 			}
 
-		} catch (IOException e) {
+		} catch (IOException | NotBoundException | InvalidDomainException | AlreadyRegisteredException e) {
 			System.err.println("tcp handler: " + e.getMessage());
-
 		}
 
 	}

@@ -1,5 +1,7 @@
 package chatserver;
 
+import util.Config;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.ServerSocket;
@@ -25,14 +27,16 @@ public class TcpListener extends Thread {
 	private ExecutorService threadPool;
 	private TcpHandler handler;
 	private Socket socket;
+	private Config config;
 
 
-	public TcpListener(ServerSocket serverSocket, PrintStream userResponseStream, ConcurrentHashMap<String, UserData> users, ExecutorService threadPool) {
+	public TcpListener(Config config, ServerSocket serverSocket, PrintStream userResponseStream, ConcurrentHashMap<String, UserData> users, ExecutorService threadPool) {
 		this.serverSocket = serverSocket;
 		this.userResponseStream = userResponseStream;
 		this.users = users;
 		this.end = false;
 		this.threadPool = threadPool;
+		this.config = config;
 	}
 
 	public Map<String, UserData> getUsers() {		
@@ -57,7 +61,7 @@ public class TcpListener extends Thread {
 				socket = serverSocket.accept();
 
 				//Handle each client request in a separate thread
-				handler = new TcpHandler(socket, userResponseStream, users, this);
+				handler = new TcpHandler(config, socket, userResponseStream, users, this);
 				threadPool.submit(handler);
 				h.add(handler);
 

@@ -92,7 +92,7 @@ public class Chatserver implements IChatserverCli, Runnable {
 			userResponseStream.println("Server up and waiting for commands!");
 
 			//Listen for new connections
-			tcpListener = new TcpListener(serverSocket, userResponseStream, users, threadPool);
+			tcpListener = new TcpListener(config, serverSocket, userResponseStream, users, threadPool);
 			threadPool.submit(tcpListener);
 
 			//Wait for incoming packets
