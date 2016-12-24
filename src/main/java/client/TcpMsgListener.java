@@ -37,6 +37,7 @@ public class TcpMsgListener extends Thread {
 			try {
 				//Wait for client to connect
 				socket = serverSocket.accept();
+				System.err.println("Started server socket at " + socket.getInetAddress());
 
 				//Handle incoming message in a separate thread
 				handler = new TcpMsgHandler(socket, userResponseStream, this);

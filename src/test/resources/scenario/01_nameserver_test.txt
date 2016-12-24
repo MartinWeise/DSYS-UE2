@@ -12,13 +12,13 @@ alice.vienna.at:	   !login alice.vienna.at 12345
 >					      verify("success")
 
 alice.vienna.at:     !register localhost:8000
->                    verify("for user alice.vienna.at")
+>                    verify("Success")
 
-alice.vienna.at:     !lookup alice.vienna.at
->                    verify(".*localhost:8000.*", T(test.util.Flag).REGEX)
+ns-vienna-at:        !addresses
+>                    verify("1. alice localhost:8000")
 
-chatserver: 		   !exit
 alice.vienna.at:	   !exit
+chatserver: 		   !exit
 ns-vienna-at:        !exit
 ns-at:               !exit
 ns-de:               !exit

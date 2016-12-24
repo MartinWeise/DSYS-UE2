@@ -32,6 +32,8 @@ public class TcpMsgHandler extends Thread {
 
 			while (!end && (message = reader.readLine()) != null) {
 
+				// TODO: remove this type of messages?
+				System.out.println("Got private message " + message);
 				userResponseStream.println(message);
 				
 				String response = "!ack";

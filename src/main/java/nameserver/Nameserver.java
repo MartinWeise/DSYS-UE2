@@ -65,6 +65,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 	public void run() {
 		try {
 			subzones = new ConcurrentHashMap<>();
+			users = new ConcurrentHashMap<>();
 			if (config.listKeys().contains("domain")) {
 				/* component is non-root */
 				registry = LocateRegistry.getRegistry(config.getString("registry.host"), config.getInt("registry.port"));
@@ -77,7 +78,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 				INameserver nameserverRemote = (INameserver) UnicastRemoteObject.exportObject(this, 0);
 				registry.bind(config.getString("root_id"), nameserverRemote);
 			}
-		} catch (RemoteException | AlreadyBoundException | NotBoundException
+		} catch (RemoteException | NotBoundException | AlreadyBoundException
 				| AlreadyRegisteredException | InvalidDomainException e) {
 			throw new RuntimeException(e);
 		}
@@ -132,6 +133,15 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 	@Command
 	public String exit() throws IOException {
 		shell.close();
+		if (componentName.equals("ns-root")) {
+			try {
+				registry.unbind(config.getString("root_id"));
+				// TODO: keep this sort of info?
+				System.out.println("Unbinding of component " + componentName + " successful.");
+			} catch (NotBoundException e) {
+				System.err.println("exit: " + e.getMessage());
+			}
+		}
 		if (!UnicastRemoteObject.unexportObject(this, false)) {
 			/* now force it */
 			if (!UnicastRemoteObject.unexportObject(this, true)) {
@@ -204,6 +214,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 
 	@Override
 	public String lookup(String username) throws RemoteException {
+		System.out.println("Lookup called on username " + username);
 		if (users.containsKey(username)) {
 			return users.get(username);
 		} else {
