@@ -251,8 +251,12 @@ public class Client implements IClientCli, Runnable {
 		if(userResponseStream != null) {
 			userResponseStream.close();
 		}
-		clListener.close();
-		udpListener.close();
+		if (clListener != null) {
+			clListener.close();
+		}
+		if (udpListener != null) {
+			udpListener.close();
+		}
 		
 		threadPool.shutdown();
 
