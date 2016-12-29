@@ -333,60 +333,98 @@ public class Client implements IClientCli, Runnable {
 
 		if(!getOnline()) {
 
-			PrivateKey clientPrivKey;
+			PrivateKey userPrivKey = null;
 			PublicKey serverPubKey = null;
-			
-			//Read the client's private key for the chatserver communication
+
+			//Read the private key of the user for the chatserver communication
 			String keyDir = config.getString("keys.dir");
 			try {
-				clientPrivKey = Keys.readPrivatePEM(new File(keyDir + "/" + username + ".pem"));
-				
+				userPrivKey = Keys.readPrivatePEM(new File(keyDir + "/" + username + ".pem"));
+
 			} catch (IOException e) {
 				System.err.println("Failed to read the private key of " + username + "! " + e.getMessage());
 			}
-			
-			//Read the server's public key
+
+			//Read the public key of the server
 			String key = config.getString("chatserver.key");
 			try {
 				serverPubKey = Keys.readPublicPEM(new File(key));
 			} catch (IOException e) {
 				System.err.println("Failed to read the chatserver's public key! " + e.getMessage());
 			}
-			
+
 			//Generate the client-challenge as a 32-byte-secure-random-number
 			SecureRandom secureRandom = new SecureRandom(); 
 			final byte[] challenge = new byte[32]; 
 			secureRandom.nextBytes(challenge); 
-			
+
 			//Encode the challenge separately using Base64
-			byte[] encodedChallenge = Base64.encode(challenge);
-			
+			String encodedChallenge = new String(Base64.encode(challenge), "UTF-8");
+
 			//Prepare the message: !authenticate <username> <client-challenge>
-			String message = "!authenticate " + username + " " + new String(encodedChallenge, "UTF-8");
-			
-			//Encrypt the overall message using RSA initialized with the chatserver’s public key.
+			String message = "!authenticate " + username + " " + encodedChallenge;
+
+			//Encrypt the overall message using RSA initialized with the chatserver’s public key
 			Cipher cipher = null;
 			byte[] encryptedMessage = null;
 			try {
 				cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
 				cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
 				encryptedMessage = cipher.doFinal(message.getBytes("UTF-8"));
-				
+
 			} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
 				System.err.println("Failed to encrypt the first message! " + e.getMessage());
 			}
-			
-			//Encode the overall ciphertext using Base64 before sending it
+
+			//Encode the overall ciphertext using Base64
 			byte[] encodedCipher = Base64.encode(encryptedMessage);
-			
+
 			//Send the message to the chatserver
 			out.println(new String(encodedCipher, "UTF-8"));
+
 			
-			
-			//TODO: error if username not found or private user key not found
-			
-			
-			
+			//Get the server response
+			String response = "";
+			if(in != null) {
+				response = in.readLine();
+			}
+
+			//Decode the message
+			byte[] decodedMessage = Base64.decode(response);
+
+			//Decrypt the message
+			cipher = null;
+			String decryptedMessage = null;
+			try {
+				cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+				cipher.init(Cipher.DECRYPT_MODE, userPrivKey);
+				decryptedMessage = new String(cipher.doFinal(decodedMessage), "UTF-8");
+
+			} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+				System.err.println("Failed to decrypt the second message! " + e.getMessage());
+			}
+
+			if (decryptedMessage.startsWith("!ok")) {
+				String[] parts = decryptedMessage.split("\\s");
+				String clientChallenge = parts[1];
+				String chatserverChallenge = parts[2];
+				String secretKey = parts[3];
+				String IVparam = parts[4];
+				boolean err = false;
+				
+				//Check if the received <client-challenge> matches the sent one
+				if(!encodedChallenge.equals(clientChallenge)) {
+					System.err.println("The received  <client-challenge> doesn't match the sent one!");
+					err = true;
+					
+				} else {
+					//TODO: remove this message
+					System.out.println("Success!!");
+				}
+				
+				
+			}
+
 		} else {
 			userResponseStream.println("Already logged in.");
 		}

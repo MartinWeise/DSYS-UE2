@@ -20,9 +20,12 @@ import java.rmi.registry.Registry;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -33,6 +36,8 @@ import org.bouncycastle.util.encoders.Base64;
 
 public class TcpHandler extends Thread {
 
+	//private static Logger logger = Logger.getLogger(Chatserver.class.getName());
+	
 	private Socket socket;
 	private PrintStream userResponseStream;
 	private ConcurrentHashMap<String, UserData> users;
@@ -217,6 +222,8 @@ public class TcpHandler extends Thread {
 							response = d.getSenderName() + ": " + d.getLastReceivedMessage();
 						}
 					}
+					
+					
 				} else {
 
 					//Decode the message
@@ -235,24 +242,71 @@ public class TcpHandler extends Thread {
 					}
 
 					if (decryptedMessage.startsWith("!authenticate")) {
+						parts = decryptedMessage.split("\\s");
 						if (parts.length > 3) {
 							response = "Too much arguments: !authenticate <username> <client-challenge>";
 
 						} else {
-							response = "Received a message! :)";
+							String username = parts[1];
+							String clientChallenge = parts[2];
+							
+							//Read the public key of the user
+							PublicKey userPubKey = null;
+							String keyDir = config.getString("keys.dir");
+							try {
+								userPubKey = Keys.readPublicPEM(new File(keyDir + "/" + username + ".pub.pem"));
+								
+							} catch (IOException e) {
+								System.err.println("Failed to read the public key of " + username + "! " + e.getMessage());
+							}
+							
+							
+							//Generate the chatserver-challenge as a 32-byte-secure-random-number
+							SecureRandom secureRandom = new SecureRandom(); 
+							final byte[] challenge = new byte[32]; 
+							secureRandom.nextBytes(challenge); 
+							
+							//Encode the challenge separately using Base64
+							String serverChallenge = new String(Base64.encode(challenge), "UTF-8");
 
+							//Generate the secret-key as a 256-bit-secure-random-number
+							secureRandom = new SecureRandom();
+							final byte[] key = new byte[32];
+							secureRandom.nextBytes(key);
+							
+							//Encode the secret key separately using Base64
+							String secretKey = new String(Base64.encode(key), "UTF-8");
+							
+							//Generate the IV parameter as a 16-byte-secure-random-number
+							secureRandom = new SecureRandom(); 
+							final byte[] IV = new byte[16]; 
+							secureRandom.nextBytes(IV);
+							
+							//Encode the IV parameter separately using Base64
+							String IVparam = new String(Base64.encode(IV), "UTF-8");
+							
+							//Prepare the response: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>
+							String message = "!ok " + clientChallenge + " " + serverChallenge + " " + secretKey + " " + IVparam;
+							
+							//Encrypt the overall message using RSA initialized with the user’s public key
+							cipher = null;
+							byte[] encryptedMessage = null;
+							try {
+								cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+								cipher.init(Cipher.ENCRYPT_MODE, userPubKey);
+								encryptedMessage = cipher.doFinal(message.getBytes("UTF-8"));
+								
+							} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+								System.err.println("Failed to encrypt the second message! " + e.getMessage());
+							}
+							
+							//Encode the overall ciphertext using Base64
+							byte[] encodedCipher = Base64.encode(encryptedMessage);
+							
+							//Send the message to the user
+							response = new String(encodedCipher, "UTF-8");
+							
 						}
-
-
-					} else if (decryptedMessage.startsWith("!ok")) {
-						if (parts.length > 5) {
-							response = "Too much arguments: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>";
-
-						} else {
-
-
-						}
-
 
 
 					}
