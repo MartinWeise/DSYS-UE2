@@ -14,10 +14,21 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.Security;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
+import org.bouncycastle.util.encoders.Base64;
 
 import cli.Command;
 import cli.Shell;
@@ -323,6 +334,7 @@ public class Client implements IClientCli, Runnable {
 		if(!getOnline()) {
 
 			PrivateKey clientPrivKey;
+			PublicKey serverPubKey = null;
 			
 			//Read the client's private key for the chatserver communication
 			String keyDir = config.getString("keys.dir");
@@ -333,14 +345,46 @@ public class Client implements IClientCli, Runnable {
 				System.err.println("Failed to read the private key of " + username + "! " + e.getMessage());
 			}
 			
-			//TODO: error if username not found
+			//Read the server's public key
+			String key = config.getString("chatserver.key");
+			try {
+				serverPubKey = Keys.readPublicPEM(new File(key));
+			} catch (IOException e) {
+				System.err.println("Failed to read the chatserver's public key! " + e.getMessage());
+			}
 			
-			// !authenticate <username> <client-challenge>
-			//String challenge = "";
-			//out.println("!authenticate " + username + challenge);
-			//encode using base64 + encrypt using RSA
+			//Generate the client-challenge as a 32-byte-secure-random-number
+			SecureRandom secureRandom = new SecureRandom(); 
+			final byte[] challenge = new byte[32]; 
+			secureRandom.nextBytes(challenge); 
 			
-			//userResponseStream.println("Successfully read the user's key! " + username);
+			//Encode the challenge separately using Base64
+			byte[] encodedChallenge = Base64.encode(challenge);
+			
+			//Prepare the message: !authenticate <username> <client-challenge>
+			String message = "!authenticate " + username + " " + new String(encodedChallenge, "UTF-8");
+			
+			//Encrypt the overall message using RSA initialized with the chatserver’s public key.
+			Cipher cipher = null;
+			byte[] encryptedMessage = null;
+			try {
+				cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+				cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
+				encryptedMessage = cipher.doFinal(message.getBytes("UTF-8"));
+				
+			} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+				System.err.println("Failed to encrypt the first message! " + e.getMessage());
+			}
+			
+			//Encode the overall ciphertext using Base64 before sending it
+			byte[] encodedCipher = Base64.encode(encryptedMessage);
+			
+			//Send the message to the chatserver
+			out.println(new String(encodedCipher, "UTF-8"));
+			
+			
+			//TODO: error if username not found or private user key not found
+			
 			
 			
 		} else {

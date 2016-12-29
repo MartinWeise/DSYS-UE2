@@ -5,8 +5,10 @@ import nameserver.INameserverForChatserver;
 import nameserver.exceptions.AlreadyRegisteredException;
 import nameserver.exceptions.InvalidDomainException;
 import util.Config;
+import util.Keys;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -15,9 +17,19 @@ import java.net.Socket;
 import java.rmi.NotBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
+import org.bouncycastle.util.encoders.Base64;
 
 public class TcpHandler extends Thread {
 
@@ -30,6 +42,7 @@ public class TcpHandler extends Thread {
 	private UserData d;
 	private boolean end;
 	private Config config;
+	private PrivateKey privKey;
 
 	public TcpHandler(Config config, Socket socket, PrintStream userResponseStream, ConcurrentHashMap<String, UserData> users, TcpListener tL) {
 		this.socket = socket;
@@ -38,6 +51,15 @@ public class TcpHandler extends Thread {
 		this.tL = tL;
 		this.end = false;
 		this.config = config;
+
+		//Read the chatserver's private key for the client communication
+		String key = config.getString("key");
+		try {
+			privKey = Keys.readPrivatePEM(new File(key));
+
+		} catch (IOException e) {
+			System.err.println("Failed to read the chatserver's private key! " + e.getMessage());
+		}
 	}
 
 
@@ -54,6 +76,21 @@ public class TcpHandler extends Thread {
 				userResponseStream.println("Client: " + request);
 				String[] parts = request.split("\\s");
 				String response = "Command not available!";
+
+				//Decode the message
+				byte[] decodedMessage = Base64.decode(request);
+
+				//Decrypt the message
+				Cipher cipher = null;
+				String decryptedMessage = null;
+				try {
+					cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+					cipher.init(Cipher.DECRYPT_MODE, privKey);
+					decryptedMessage = new String(cipher.doFinal(decodedMessage), "UTF-8");
+
+				} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+					System.err.println("Failed to decrypt the first message! " + e.getMessage());
+				}
 
 				if (request.startsWith("!login")) {
 					if (parts.length > 3) {
@@ -85,29 +122,31 @@ public class TcpHandler extends Thread {
 					}
 
 
-				} else if (request.startsWith("!authenticate")) {
+				} else if (decryptedMessage.startsWith("!authenticate")) {
 					if (parts.length > 3) {
 						response = "Too much arguments: !authenticate <username> <client-challenge>";
-					} else {
 
+					} else {
+						response = "Received a message! :)";
 
 					}
 
-					
+
 				} else if (request.startsWith("!ok")) {
 					if (parts.length > 5) {
 						response = "Too much arguments: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>";
+
 					} else {
 
 
-						
+
 						//bool awaitingChallenge = true;
-						
+
 					}
-					
-					
-					
-					
+
+
+
+
 
 				} else if (request.startsWith("!logout")) {
 					if (parts.length > 1) {

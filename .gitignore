@@ -1,5 +1,6 @@
 .idea/
 .settings
+.stackdump
 build/
 *iml
 reports/
