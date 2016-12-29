@@ -77,20 +77,6 @@ public class TcpHandler extends Thread {
 				String[] parts = request.split("\\s");
 				String response = "Command not available!";
 
-				//Decode the message
-				byte[] decodedMessage = Base64.decode(request);
-
-				//Decrypt the message
-				Cipher cipher = null;
-				String decryptedMessage = null;
-				try {
-					cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-					cipher.init(Cipher.DECRYPT_MODE, privKey);
-					decryptedMessage = new String(cipher.doFinal(decodedMessage), "UTF-8");
-
-				} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
-					System.err.println("Failed to decrypt the first message! " + e.getMessage());
-				}
 
 				if (request.startsWith("!login")) {
 					if (parts.length > 3) {
@@ -120,32 +106,6 @@ public class TcpHandler extends Thread {
 							response = "Wrong username or password.";
 						}
 					}
-
-
-				} else if (decryptedMessage.startsWith("!authenticate")) {
-					if (parts.length > 3) {
-						response = "Too much arguments: !authenticate <username> <client-challenge>";
-
-					} else {
-						response = "Received a message! :)";
-
-					}
-
-
-				} else if (request.startsWith("!ok")) {
-					if (parts.length > 5) {
-						response = "Too much arguments: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>";
-
-					} else {
-
-
-
-						//bool awaitingChallenge = true;
-
-					}
-
-
-
 
 
 				} else if (request.startsWith("!logout")) {
@@ -257,11 +217,51 @@ public class TcpHandler extends Thread {
 							response = d.getSenderName() + ": " + d.getLastReceivedMessage();
 						}
 					}
+				} else {
+
+					//Decode the message
+					byte[] decodedMessage = Base64.decode(request);
+
+					//Decrypt the message
+					Cipher cipher = null;
+					String decryptedMessage = null;
+					try {
+						cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+						cipher.init(Cipher.DECRYPT_MODE, privKey);
+						decryptedMessage = new String(cipher.doFinal(decodedMessage), "UTF-8");
+
+					} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+						System.err.println("Failed to decrypt the first message! " + e.getMessage());
+					}
+
+					if (decryptedMessage.startsWith("!authenticate")) {
+						if (parts.length > 3) {
+							response = "Too much arguments: !authenticate <username> <client-challenge>";
+
+						} else {
+							response = "Received a message! :)";
+
+						}
+
+
+					} else if (decryptedMessage.startsWith("!ok")) {
+						if (parts.length > 5) {
+							response = "Too much arguments: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>";
+
+						} else {
+
+
+						}
+
+
+
+					}
 				}
 
 				//Print the server response
 				writer.println(response);
 			}
+			
 		} catch (IOException | NotBoundException | InvalidDomainException | AlreadyRegisteredException e) { //
 			System.err.println("tcp handler: " + e.getMessage());
 		}
