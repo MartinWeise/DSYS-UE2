@@ -1,6 +1,7 @@
 package client;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -13,12 +14,15 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.PrivateKey;
+import java.security.Security;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import cli.Command;
 import cli.Shell;
 import util.Config;
+import util.Keys;
 
 public class Client implements IClientCli, Runnable {
 
@@ -79,6 +83,8 @@ public class Client implements IClientCli, Runnable {
 		//UDP port where the chatserver is listening for client requests
 		udpPort = config.getInt("chatserver.udp.port");
 
+		//Register the bouncy castle provider
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 
 		try {
 			socket = new Socket(host, tcpPort);
@@ -162,7 +168,7 @@ public class Client implements IClientCli, Runnable {
 
 		udpListener = new UdpListener(datagramSocket, userResponseStream, threadPool);
 		threadPool.submit(udpListener);
-		
+
 		return null;
 	}
 
@@ -257,7 +263,7 @@ public class Client implements IClientCli, Runnable {
 		if (udpListener != null) {
 			udpListener.close();
 		}
-		
+
 		threadPool.shutdown();
 
 		return null;
@@ -310,8 +316,37 @@ public class Client implements IClientCli, Runnable {
 	// implement them for the first submission. ---
 
 	@Override
+	@Command
 	public String authenticate(String username) throws IOException {
 		// TODO Auto-generated method stub
+
+		if(!getOnline()) {
+
+			PrivateKey clientPrivKey;
+			
+			//Read the client's private key for the chatserver communication
+			String keyDir = config.getString("keys.dir");
+			try {
+				clientPrivKey = Keys.readPrivatePEM(new File(keyDir + "/" + username + ".pem"));
+				
+			} catch (IOException e) {
+				System.err.println("Failed to read the private key of " + username + "! " + e.getMessage());
+			}
+			
+			//TODO: error if username not found
+			
+			// !authenticate <username> <client-challenge>
+			//String challenge = "";
+			//out.println("!authenticate " + username + challenge);
+			//encode using base64 + encrypt using RSA
+			
+			//userResponseStream.println("Successfully read the user's key! " + username);
+			
+			
+		} else {
+			userResponseStream.println("Already logged in.");
+		}
+
 		return null;
 	}
 

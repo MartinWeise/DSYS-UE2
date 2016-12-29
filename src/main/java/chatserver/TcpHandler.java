@@ -85,6 +85,30 @@ public class TcpHandler extends Thread {
 					}
 
 
+				} else if (request.startsWith("!authenticate")) {
+					if (parts.length > 3) {
+						response = "Too much arguments: !authenticate <username> <client-challenge>";
+					} else {
+
+
+					}
+
+					
+				} else if (request.startsWith("!ok")) {
+					if (parts.length > 5) {
+						response = "Too much arguments: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>";
+					} else {
+
+
+						
+						//bool awaitingChallenge = true;
+						
+					}
+					
+					
+					
+					
+
 				} else if (request.startsWith("!logout")) {
 					if (parts.length > 1) {
 						response = "Command doesn't require any arguments: !logout";

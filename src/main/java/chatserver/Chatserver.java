@@ -1,10 +1,13 @@
 package chatserver;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.DatagramSocket;
 import java.net.ServerSocket;
+import java.security.PrivateKey;
+import java.security.Security;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +17,7 @@ import java.util.concurrent.Executors;
 import cli.Command;
 import cli.Shell;
 import util.Config;
+import util.Keys;
 
 public class Chatserver implements IChatserverCli, Runnable {
 
@@ -32,6 +36,9 @@ public class Chatserver implements IChatserverCli, Runnable {
 	private TcpListener tcpListener;
 	private UdpListener udpListener;
 
+	//The private key of the chatserver
+	private PrivateKey privKey;
+	
 	/**
 	 * @param componentName
 	 *            the name of the component - represented in the prompt
@@ -63,6 +70,21 @@ public class Chatserver implements IChatserverCli, Runnable {
 		//Port to be used for instantiating a java.net.DatagramSocket (handling UDP requests from clients)
 		udpPort = config.getInt("udp.port");
 
+		//Register the bouncy castle provider
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		
+		//Directory where to look for keys
+		//String keyDir = config.getString("keys.dir");
+		
+		//Read the chatserver's private key for the client communication
+		String key = config.getString("key");
+		try {
+			privKey = Keys.readPrivatePEM(new File(key));
+			
+		} catch (IOException e) {
+			System.err.println("Failed to read the chatservers private key! " + e.getMessage());
+		}
+		
 		//Read the user properties and save username and password to the user's hashmap
 		Config userProp = new Config("user");
 		Set<String> keys = userProp.listKeys();
