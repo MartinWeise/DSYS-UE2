@@ -14,6 +14,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -27,6 +28,9 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.util.encoders.Base64;
 
@@ -329,7 +333,6 @@ public class Client implements IClientCli, Runnable {
 	@Override
 	@Command
 	public String authenticate(String username) throws IOException {
-		// TODO Auto-generated method stub
 
 		if(!getOnline()) {
 
@@ -410,16 +413,39 @@ public class Client implements IClientCli, Runnable {
 				String chatserverChallenge = parts[2];
 				String secretKey = parts[3];
 				String IVparam = parts[4];
-				boolean err = false;
-				
+						
 				//Check if the received <client-challenge> matches the sent one
-				if(!encodedChallenge.equals(clientChallenge)) {
-					System.err.println("The received  <client-challenge> doesn't match the sent one!");
-					err = true;
+				if(!new String(Base64.decode(encodedChallenge), "UTF-8").equals(new String(Base64.decode(clientChallenge), "UTF-8"))) {
+					System.err.println("The received <client-challenge> doesn't match the sent one!");
 					
 				} else {
 					//TODO: remove this message
 					System.out.println("Success!!");
+										
+					//Decode the secret-key and IV-paramter
+					byte[] decSecretKey = Base64.decode(secretKey);
+					SecretKey sKey = new SecretKeySpec(decSecretKey, 0, decSecretKey.length, "AES");
+					byte[] decIV = Base64.decode(IVparam);
+					
+					//Encrypt the <chatserver-challenge> using AES initialized with the <secret-key> and the <iv-parameter>
+					cipher = null;
+					encryptedMessage = null;
+					try {
+						cipher = Cipher.getInstance("AES/CTR/NoPadding");
+						cipher.init(Cipher.ENCRYPT_MODE, sKey, new IvParameterSpec(decIV));
+						encryptedMessage = cipher.doFinal(chatserverChallenge.getBytes("UTF-8"));
+
+					} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
+						System.err.println("Failed to encrypt the third message! " + e.getMessage());
+					}
+
+					//Encode the ciphertext using Base64
+					encodedCipher = Base64.encode(encryptedMessage);
+
+					//Send the message to the chatserver
+					out.println(new String(encodedCipher, "UTF-8"));
+					
+					
 				}
 				
 				

@@ -17,6 +17,7 @@ import java.net.Socket;
 import java.rmi.NotBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -30,14 +31,17 @@ import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 import org.bouncycastle.util.encoders.Base64;
 
 public class TcpHandler extends Thread {
 
 	//private static Logger logger = Logger.getLogger(Chatserver.class.getName());
-	
+
 	private Socket socket;
 	private PrintStream userResponseStream;
 	private ConcurrentHashMap<String, UserData> users;
@@ -48,6 +52,10 @@ public class TcpHandler extends Thread {
 	private boolean end;
 	private Config config;
 	private PrivateKey privKey;
+	private String serverChallenge;
+	private boolean awaitingMessage;
+	private SecretKey key;
+	private byte[] IV;
 
 	public TcpHandler(Config config, Socket socket, PrintStream userResponseStream, ConcurrentHashMap<String, UserData> users, TcpListener tL) {
 		this.socket = socket;
@@ -222,100 +230,130 @@ public class TcpHandler extends Thread {
 							response = d.getSenderName() + ": " + d.getLastReceivedMessage();
 						}
 					}
-					
-					
+
+
 				} else {
 
 					//Decode the message
 					byte[] decodedMessage = Base64.decode(request);
+					response = "";
+					
+					if(awaitingMessage) {
+						//Decrypt the message using AES
+						Cipher cipher = null;
+						String decryptedMessage = null;
+						try {
+							cipher = Cipher.getInstance("AES/CTR/NoPadding");
+							cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(IV));
+							decryptedMessage = new String(cipher.doFinal(decodedMessage), "UTF-8");
 
-					//Decrypt the message
-					Cipher cipher = null;
-					String decryptedMessage = null;
-					try {
-						cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-						cipher.init(Cipher.DECRYPT_MODE, privKey);
-						decryptedMessage = new String(cipher.doFinal(decodedMessage), "UTF-8");
-
-					} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
-						System.err.println("Failed to decrypt the first message! " + e.getMessage());
-					}
-
-					if (decryptedMessage.startsWith("!authenticate")) {
-						parts = decryptedMessage.split("\\s");
-						if (parts.length > 3) {
-							response = "Too much arguments: !authenticate <username> <client-challenge>";
-
+						} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
+							System.err.println("Failed to decrypt the first message! " + e.getMessage());
+						}
+						
+						//Check if the message matches the <chatserver-challenge>
+						if(!new String(Base64.decode(decryptedMessage), "UTF-8").equals(new String(Base64.decode(serverChallenge), "UTF-8"))) {
+							System.err.println("The received message doesn't match the <chatserver-challenge>");
+							
 						} else {
-							String username = parts[1];
-							String clientChallenge = parts[2];
-							
-							//Read the public key of the user
-							PublicKey userPubKey = null;
-							String keyDir = config.getString("keys.dir");
-							try {
-								userPubKey = Keys.readPublicPEM(new File(keyDir + "/" + username + ".pub.pem"));
-								
-							} catch (IOException e) {
-								System.err.println("Failed to read the public key of " + username + "! " + e.getMessage());
-							}
-							
-							
-							//Generate the chatserver-challenge as a 32-byte-secure-random-number
-							SecureRandom secureRandom = new SecureRandom(); 
-							final byte[] challenge = new byte[32]; 
-							secureRandom.nextBytes(challenge); 
-							
-							//Encode the challenge separately using Base64
-							String serverChallenge = new String(Base64.encode(challenge), "UTF-8");
-
-							//Generate the secret-key as a 256-bit-secure-random-number
-							secureRandom = new SecureRandom();
-							final byte[] key = new byte[32];
-							secureRandom.nextBytes(key);
-							
-							//Encode the secret key separately using Base64
-							String secretKey = new String(Base64.encode(key), "UTF-8");
-							
-							//Generate the IV parameter as a 16-byte-secure-random-number
-							secureRandom = new SecureRandom(); 
-							final byte[] IV = new byte[16]; 
-							secureRandom.nextBytes(IV);
-							
-							//Encode the IV parameter separately using Base64
-							String IVparam = new String(Base64.encode(IV), "UTF-8");
-							
-							//Prepare the response: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>
-							String message = "!ok " + clientChallenge + " " + serverChallenge + " " + secretKey + " " + IVparam;
-							
-							//Encrypt the overall message using RSA initialized with the user’s public key
-							cipher = null;
-							byte[] encryptedMessage = null;
-							try {
-								cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-								cipher.init(Cipher.ENCRYPT_MODE, userPubKey);
-								encryptedMessage = cipher.doFinal(message.getBytes("UTF-8"));
-								
-							} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
-								System.err.println("Failed to encrypt the second message! " + e.getMessage());
-							}
-							
-							//Encode the overall ciphertext using Base64
-							byte[] encodedCipher = Base64.encode(encryptedMessage);
-							
-							//Send the message to the user
-							response = new String(encodedCipher, "UTF-8");
-							
+							//TODO: remove this message
+							System.out.println("Successsssssss!!");
 						}
 
+					} else {
+						//Decrypt the message using RSA
+						Cipher cipher = null;
+						String decryptedMessage = null;
+						try {
+							cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+							cipher.init(Cipher.DECRYPT_MODE, privKey);
+							decryptedMessage = new String(cipher.doFinal(decodedMessage), "UTF-8");
 
+						} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+							System.err.println("Failed to decrypt the first message! " + e.getMessage());
+						}
+
+						if (decryptedMessage.startsWith("!authenticate")) {
+							parts = decryptedMessage.split("\\s");
+							if (parts.length > 3) {
+								response = "Too much arguments: !authenticate <username> <client-challenge>";
+
+							} else {
+								String username = parts[1];
+								String clientChallenge = parts[2];
+
+								//Read the public key of the user
+								PublicKey userPubKey = null;
+								String keyDir = config.getString("keys.dir");
+								try {
+									userPubKey = Keys.readPublicPEM(new File(keyDir + "/" + username + ".pub.pem"));
+
+								} catch (IOException e) {
+									System.err.println("Failed to read the public key of " + username + "! " + e.getMessage());
+								}
+
+
+								//Generate the chatserver-challenge as a 32-byte-secure-random-number
+								SecureRandom secureRandom = new SecureRandom(); 
+								final byte[] challenge = new byte[32]; 
+								secureRandom.nextBytes(challenge); 
+
+								//Encode the challenge separately using Base64
+								serverChallenge = new String(Base64.encode(challenge), "UTF-8");
+
+								//Generate the 256-bit-secret-key for AES
+								key = null;
+								try {
+									KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+									keyGen.init(256);
+									key = keyGen.generateKey();
+								} catch (NoSuchAlgorithmException e) {
+									System.err.println("Failed to generate the secret key for AES! " + e.getMessage());
+								}
+
+								//Encode the secret key separately using Base64
+								String secretKey = new String(Base64.encode(key.getEncoded()), "UTF-8");
+
+								//Generate the IV parameter as a 16-byte-secure-random-number
+								secureRandom = new SecureRandom(); 
+								IV = new byte[16]; 
+								secureRandom.nextBytes(IV);
+
+								//Encode the IV parameter separately using Base64
+								String IVparam = new String(Base64.encode(IV), "UTF-8");
+
+								//Prepare the response: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>
+								String message = "!ok " + clientChallenge + " " + serverChallenge + " " + secretKey + " " + IVparam;
+
+								//Encrypt the overall message using RSA initialized with the user’s public key
+								cipher = null;
+								byte[] encryptedMessage = null;
+								try {
+									cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+									cipher.init(Cipher.ENCRYPT_MODE, userPubKey);
+									encryptedMessage = cipher.doFinal(message.getBytes("UTF-8"));
+
+								} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+									System.err.println("Failed to encrypt the second message! " + e.getMessage());
+								}
+
+								//Encode the overall ciphertext using Base64
+								byte[] encodedCipher = Base64.encode(encryptedMessage);
+
+								//Send the message to the user
+								response = new String(encodedCipher, "UTF-8");						
+								awaitingMessage = true;
+							}
+
+
+						}
 					}
 				}
 
 				//Print the server response
 				writer.println(response);
 			}
-			
+
 		} catch (IOException | NotBoundException | InvalidDomainException | AlreadyRegisteredException e) { //
 			System.err.println("tcp handler: " + e.getMessage());
 		}
