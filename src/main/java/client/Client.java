@@ -55,7 +55,6 @@ public class Client implements IClientCli, Runnable {
 	private PrintWriter out;
 	private BufferedReader in;
 
-	private boolean online;
 	private String receiver;
 	private String message;
 	private DatagramSocket datagramSocket;
@@ -82,7 +81,6 @@ public class Client implements IClientCli, Runnable {
 
 		// DONE
 		threadPool = Executors.newCachedThreadPool();
-		online = false;
 	}
 
 	@Override
@@ -137,11 +135,8 @@ public class Client implements IClientCli, Runnable {
 	public String login(String username, String password) throws IOException {
 		// DONE Auto-generated method stub
 
-		if(!getOnline()) {
-			out.println("!login " + username + " " + password);
-		} else {
-			userResponseStream.println("Already logged in.");
-		}
+		out.println("!login " + username + " " + password);
+
 		return null;
 	}
 
@@ -150,11 +145,8 @@ public class Client implements IClientCli, Runnable {
 	public String logout() throws IOException {
 		// DONE Auto-generated method stub
 
-		if(getOnline()) {
-			out.println("!logout");
-		} else {
-			userResponseStream.println("Not logged in!");
-		}
+		out.println("!logout");
+
 		return null;
 	}
 
@@ -163,11 +155,8 @@ public class Client implements IClientCli, Runnable {
 	public String send(String message) throws IOException {
 		// DONE Auto-generated method stub
 
-		if(getOnline()) {
-			out.println("!send " + message);
-		} else {
-			userResponseStream.println("Not logged in!");
-		}
+		out.println("!send " + message);
+
 		return null;
 	}
 
@@ -192,13 +181,10 @@ public class Client implements IClientCli, Runnable {
 	public String msg(String username, String message) throws IOException {
 		// DONE Auto-generated method stub
 
-		if(getOnline()) {
-			setMessage(message);
-			setReceiver(username);
-			out.println("!lookup private+ " + username);
-		} else {
-			userResponseStream.println("Not logged in!");
-		}
+		setMessage(message);
+		setReceiver(username);
+		out.println("!lookup private+ " + username);
+
 		return null;
 	}
 
@@ -207,11 +193,8 @@ public class Client implements IClientCli, Runnable {
 	public String lookup(String username) throws IOException {
 		// DONE Auto-generated method stub
 
-		if(getOnline()) {
-			out.println("!lookup " + username);
-		} else {
-			userResponseStream.println("Not logged in!");
-		}
+		out.println("!lookup " + username);
+
 		return null;
 	}
 
@@ -220,13 +203,10 @@ public class Client implements IClientCli, Runnable {
 	public String register(String privateAddress) throws IOException {
 		// DONE Auto-generated method stub
 
-		if(getOnline()) {
-			out.println("!register " + privateAddress);
-			String[] p = privateAddress.split(":");
-			setPort(Integer.parseInt(p[1]));
-		} else {
-			userResponseStream.println("Not logged in!");
-		}
+		out.println("!register " + privateAddress);
+		String[] p = privateAddress.split(":");
+		setPort(Integer.parseInt(p[1]));
+
 		return null;
 	}
 
@@ -235,11 +215,8 @@ public class Client implements IClientCli, Runnable {
 	public String lastMsg() throws IOException {
 		// DONE Auto-generated method stub
 
-		if(getOnline()) {
-			out.println("!lastMsg");
-		} else {
-			userResponseStream.println("Not logged in!");
-		}
+		out.println("!lastMsg");
+
 		return null;
 	}
 
@@ -248,9 +225,8 @@ public class Client implements IClientCli, Runnable {
 	public String exit() throws IOException {
 		// DONE Auto-generated method stub
 
-		if(getOnline()) {
-			out.println("!logout");
-		}
+		out.println("!logout");
+
 		userResponseStream.println("Exiting client.");
 
 		if(shell != null) {
@@ -282,14 +258,6 @@ public class Client implements IClientCli, Runnable {
 		threadPool.shutdown();
 
 		return null;
-	}
-
-	public boolean getOnline() {
-		return online;
-	}
-
-	public void setOnline(boolean online) {
-		this.online = online;
 	}
 
 	public String getReceiver() {
@@ -334,20 +302,21 @@ public class Client implements IClientCli, Runnable {
 	@Command
 	public String authenticate(String username) throws IOException {
 
-		if(!getOnline()) {
+		PrivateKey userPrivKey = null;
+		PublicKey serverPubKey = null;
+		boolean error = false;
 
-			PrivateKey userPrivKey = null;
-			PublicKey serverPubKey = null;
+		//Read the private key of the user for the chatserver communication
+		String keyDir = config.getString("keys.dir");
+		try {
+			userPrivKey = Keys.readPrivatePEM(new File(keyDir + "/" + username + ".pem"));
 
-			//Read the private key of the user for the chatserver communication
-			String keyDir = config.getString("keys.dir");
-			try {
-				userPrivKey = Keys.readPrivatePEM(new File(keyDir + "/" + username + ".pem"));
+		} catch (IOException e) {
+			System.err.println("Failed to read the private key of " + username + "! " + e.getMessage());
+			error = true;
+		}
 
-			} catch (IOException e) {
-				System.err.println("Failed to read the private key of " + username + "! " + e.getMessage());
-			}
-
+		if(!error) {
 			//Read the public key of the server
 			String key = config.getString("chatserver.key");
 			try {
@@ -385,7 +354,7 @@ public class Client implements IClientCli, Runnable {
 			//Send the message to the chatserver
 			out.println(new String(encodedCipher, "UTF-8"));
 
-			
+
 			//Get the server response
 			String response = "";
 			if(in != null) {
@@ -413,20 +382,20 @@ public class Client implements IClientCli, Runnable {
 				String chatserverChallenge = parts[2];
 				String secretKey = parts[3];
 				String IVparam = parts[4];
-						
+
 				//Check if the received <client-challenge> matches the sent one
 				if(!new String(Base64.decode(encodedChallenge), "UTF-8").equals(new String(Base64.decode(clientChallenge), "UTF-8"))) {
 					System.err.println("The received <client-challenge> doesn't match the sent one!");
-					
+
 				} else {
 					//TODO: remove this message
 					System.out.println("Success!!");
-										
+
 					//Decode the secret-key and IV-paramter
 					byte[] decSecretKey = Base64.decode(secretKey);
 					SecretKey sKey = new SecretKeySpec(decSecretKey, 0, decSecretKey.length, "AES");
 					byte[] decIV = Base64.decode(IVparam);
-					
+
 					//Encrypt the <chatserver-challenge> using AES initialized with the <secret-key> and the <iv-parameter>
 					cipher = null;
 					encryptedMessage = null;
@@ -444,17 +413,10 @@ public class Client implements IClientCli, Runnable {
 
 					//Send the message to the chatserver
 					out.println(new String(encodedCipher, "UTF-8"));
-					
-					
+
 				}
-				
-				
 			}
-
-		} else {
-			userResponseStream.println("Already logged in.");
 		}
-
 		return null;
 	}
 

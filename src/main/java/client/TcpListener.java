@@ -50,12 +50,6 @@ public class TcpListener extends Thread {
 				if (in != null && in.ready()) {
 					response = in.readLine();
 				}
-				if(response != null && response.equals("Successfully logged in.")) {
-					client.setOnline(true);
-				}
-				if(response != null && response.equals("Successfully logged out.")) {
-					client.setOnline(false);
-				}
 				
 				//Wait for incoming messages
 				if(response != null && response.startsWith("Successfully registered address")) {
