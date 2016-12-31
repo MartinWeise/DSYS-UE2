@@ -388,9 +388,6 @@ public class Client implements IClientCli, Runnable {
 					System.err.println("The received <client-challenge> doesn't match the sent one!");
 
 				} else {
-					//TODO: remove this message
-					System.out.println("Success!!");
-
 					//Decode the secret-key and IV-paramter
 					byte[] decSecretKey = Base64.decode(secretKey);
 					SecretKey sKey = new SecretKeySpec(decSecretKey, 0, decSecretKey.length, "AES");

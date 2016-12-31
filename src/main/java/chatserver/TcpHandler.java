@@ -280,8 +280,6 @@ public class TcpHandler extends Thread {
 
 						} else {
 							awaitingMessage = false;
-							//TODO: remove this message
-							System.out.println("Successsssssss!!");
 
 							//Authentication of the user succeeded
 							if (users.containsKey(username)) {
@@ -290,7 +288,6 @@ public class TcpHandler extends Thread {
 								d.setOnlineStatus(true);
 								online = true;
 							}
-							System.out.println("Here!!");
 						}
 
 					} else {
@@ -377,7 +374,6 @@ public class TcpHandler extends Thread {
 								response = new String(encodedCipher, "UTF-8");						
 								awaitingMessage = true;
 							}
-
 
 						}
 					}
