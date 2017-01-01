@@ -4,3 +4,8 @@
 *stackdump
 build/
 reports/
+*.class
+dsys-ue2.properties
+src/main/module_main.xml
+dsys-ue2.xml
+src/test/module_test.xml
