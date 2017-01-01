@@ -62,8 +62,6 @@ public class TcpListener extends Thread {
 
 					if(parts[1].startsWith("Wrong")) {
 						response = "Wrong username or user not reachable";
-					} else if (parts[1].startsWith("!tinkered")) {
-						out.println("Last message sent was manipulated");
 					} else {
 						String adress = parts[1];
 						String[] p = adress.split(":");
@@ -100,6 +98,8 @@ public class TcpListener extends Thread {
 
 						}
 					}
+				} else if (response != null && response.startsWith("!tinkered")) {
+					out.println("Last message sent was manipulated");
 				}
 				
 				if(awaitingMsg && reader != null) {
