@@ -56,12 +56,14 @@ public class TcpListener extends Thread {
 					msgListener = new TcpMsgListener(new ServerSocket(client.getPort()), userResponseStream, threadPool);
 					threadPool.submit(msgListener);
 				}
+
 				if(response != null && response.startsWith("private+")) {
 					String[] parts = response.split("\\s");
 
 					if(parts[1].startsWith("Wrong")) {
 						response = "Wrong username or user not reachable";
-
+					} else if (parts[1].startsWith("!tinkered")) {
+						out.println("Last message sent was manipulated");
 					} else {
 						String adress = parts[1];
 						String[] p = adress.split(":");
