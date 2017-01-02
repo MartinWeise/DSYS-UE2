@@ -32,11 +32,17 @@ public class TcpMsgHandler extends Thread {
 
 			while (!end && (message = reader.readLine()) != null) {
 
-				// TODO: remove this type of messages?
-				System.out.println("Got private message " + message);
 				userResponseStream.println(message);
-				
+				boolean tempered = false;
+
+				//TODO check message for tempering
+
 				String response = "!ack";
+				if (tempered) {
+					response = "!tempered " + message;
+				}
+
+				//TODO MAC response
 				writer.println(response);
 			}
 
