@@ -74,8 +74,8 @@ public class TcpListener extends Thread {
 							cSocket = new Socket(host, port);
 							writer = new PrintWriter(cSocket.getOutputStream(), true);						
 							reader = new BufferedReader(new InputStreamReader(cSocket.getInputStream()));
-
-							writer.println("Private msg for " + client.getReceiver() + ": " + client.getMessage());
+							//TODO richtiges Format der privaten Nachricht
+							writer.println("!msg " + client.getMessage());
 							awaitingMsg = true;
 							
 							if (reader != null) {
