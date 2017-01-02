@@ -1,16 +1,20 @@
 package client;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.io.PrintWriter;
+import com.sun.crypto.provider.HmacCore;
+import org.bouncycastle.jce.provider.JCEKeyGenerator;
+import util.Keys;
+
+import java.io.*;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutorService;
+import java.security.Key;
+import javax.crypto.Mac;
 
 public class TcpListener extends Thread {
 
@@ -74,8 +78,18 @@ public class TcpListener extends Thread {
 							cSocket = new Socket(host, port);
 							writer = new PrintWriter(cSocket.getOutputStream(), true);						
 							reader = new BufferedReader(new InputStreamReader(cSocket.getInputStream()));
-							//TODO richtiges Format der privaten Nachricht
-							writer.println("!msg " + client.getMessage());
+
+							String message = "!msg " + client.getMessage();
+							File key = new File (client.getKey());
+							Key secretKey = Keys.readSecretKey(key);
+							Mac hMac = Mac.getInstance("HmacSHA256");
+							hMac.init(secretKey);
+							hMac.update(Byte.parseByte(message));
+							byte[] hash = hMac.doFinal();
+							//TODO encode in Base64 and prepend to message
+
+
+							writer.println(message);
 							awaitingMsg = true;
 							
 							if (reader != null) {
@@ -96,6 +110,10 @@ public class TcpListener extends Thread {
 						} catch (SocketException e) {
 							System.err.println("Error creating or acessing a socket. " + e.getMessage());
 
+						} catch (InvalidKeyException e) {
+							e.printStackTrace();
+						} catch (NoSuchAlgorithmException e) {
+							e.printStackTrace();
 						}
 					}
 				} else if (response != null && response.startsWith("!tinkered")) {

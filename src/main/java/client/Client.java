@@ -284,6 +284,10 @@ public class Client implements IClientCli, Runnable {
 		this.port = port;		
 	}
 
+	public String getKey() {
+		return config.getString("hmac.key");
+	}
+
 	/**
 	 * @param args
 	 *            the first argument is the name of the {@link Client} component
@@ -336,7 +340,7 @@ public class Client implements IClientCli, Runnable {
 			//Prepare the message: !authenticate <username> <client-challenge>
 			String message = "!authenticate " + username + " " + encodedChallenge;
 
-			//Encrypt the overall message using RSA initialized with the chatserver’s public key
+			//Encrypt the overall message using RSA initialized with the chatserverï¿½s public key
 			Cipher cipher = null;
 			byte[] encryptedMessage = null;
 			try {
