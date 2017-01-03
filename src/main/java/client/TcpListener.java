@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutorService;
 import java.security.Key;
@@ -90,17 +91,35 @@ public class TcpListener extends Thread {
 
 							message = encodedHash + message;
 							writer.println(message);
-							//Michael stopped coding here
+
 							awaitingMsg = true;
 
-							//TODO check hash of !ack message
+							//TODO check hash of !ack or !tempered message
 							if (reader != null) {
 								String res = reader.readLine();
-								if(res.equals("!ack")) {
+								int index = 0;
+								if (res.contains("!tempered")) {
+									index = res.indexOf("!tempered");
+								} else if (res.contains("!ack")){
+									index = res.indexOf("!ack");
+								}
+
+								response = res.substring(index);
+								byte[] sentHash = res.substring(0,index).getBytes();
+								hMac.update(Byte.parseByte(response));
+								byte[] realHash = hMac.doFinal();
+								realHash = Base64.encode(realHash);
+								boolean tempered = MessageDigest.isEqual(sentHash, realHash);
+
+								if (tempered) {
+									System.out.println("The message received has been tempered with: " + response);
+								}
+
+								if(response.equals("!ack") || response.contains("!tempered")) {
 									awaitingMsg = false;
-									response = res;
 									cSocket.close();
 								}
+								//Michael stopped coding here
 							}
 
 						} catch (ConnectException e) {
