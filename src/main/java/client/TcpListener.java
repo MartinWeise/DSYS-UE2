@@ -56,7 +56,7 @@ public class TcpListener extends Thread {
 				
 				//Wait for incoming messages
 				if(response != null && response.startsWith("Successfully registered address")) {
-					msgListener = new TcpMsgListener(new ServerSocket(client.getPort()), userResponseStream, threadPool);
+					msgListener = new TcpMsgListener(new ServerSocket(client.getPort()), userResponseStream, threadPool, this.client);
 					threadPool.submit(msgListener);
 				}
 

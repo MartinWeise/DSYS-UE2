@@ -1,11 +1,14 @@
 package client;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.io.PrintWriter;
+import org.bouncycastle.util.encoders.Base64;
+import util.Keys;
+
+import javax.crypto.Mac;
+import java.io.*;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 
 public class TcpMsgHandler extends Thread {
 
@@ -14,12 +17,15 @@ public class TcpMsgHandler extends Thread {
 	private BufferedReader reader;
 	private PrintWriter writer;
 	private boolean end;
+	private Client client;
 
 
-	public TcpMsgHandler(Socket socket, PrintStream userResponseStream, TcpMsgListener msgListener) {
+
+	public TcpMsgHandler(Socket socket, PrintStream userResponseStream, TcpMsgListener msgListener, Client client) {
 		this.socket = socket;
 		this.userResponseStream = userResponseStream;
 		this.end = false;
+		this.client = client;
 	}
 
 
@@ -42,14 +48,26 @@ public class TcpMsgHandler extends Thread {
 					response = "!tempered " + message;
 				}
 
-				//TODO MAC response
+				File key = new File (client.getKey());
+				Key secretKey = Keys.readSecretKey(key);
+				Mac hMac = Mac.getInstance("HmacSHA256");
+				hMac.init(secretKey);
+				hMac.update(Byte.parseByte(response));
+				byte[] hash = hMac.doFinal();
+				byte[] encodedHash = Base64.encode(hash);
+
+				response = encodedHash + response;
 				writer.println(response);
 			}
 
 		} catch (IOException e) {
 			System.err.println("msg handler: " + e.getMessage());
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
 		}
-		
+
 	}
 
 	

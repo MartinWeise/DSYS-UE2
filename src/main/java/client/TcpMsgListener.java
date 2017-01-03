@@ -18,13 +18,14 @@ public class TcpMsgListener extends Thread {
 	private TcpMsgHandler handler;
 	private List<TcpMsgHandler> h = Collections.synchronizedList(new ArrayList<TcpMsgHandler>());
 	private Socket socket;
-
+	private Client client;
 	
-	public TcpMsgListener(ServerSocket serverSocket, PrintStream userResponseStream, ExecutorService threadPool) {
+	public TcpMsgListener(ServerSocket serverSocket, PrintStream userResponseStream, ExecutorService threadPool, Client client) {
 		this.serverSocket = serverSocket;
 		this.userResponseStream = userResponseStream;
 		this.threadPool = threadPool;
 		this.end = false;
+		this.client = client;
 	}
 	
 	
@@ -40,7 +41,7 @@ public class TcpMsgListener extends Thread {
 				System.err.println("Started server socket at " + socket.getInetAddress());
 
 				//Handle incoming message in a separate thread
-				handler = new TcpMsgHandler(socket, userResponseStream, this);
+				handler = new TcpMsgHandler(socket, userResponseStream, this, this.client);
 				threadPool.submit(handler);
 				h.add(handler);
 
