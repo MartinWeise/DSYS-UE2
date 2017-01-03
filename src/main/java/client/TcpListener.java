@@ -1,7 +1,6 @@
 package client;
 
-import com.sun.crypto.provider.HmacCore;
-import org.bouncycastle.jce.provider.JCEKeyGenerator;
+import org.bouncycastle.util.encoders.Base64;
 import util.Keys;
 
 import java.io.*;
@@ -79,6 +78,7 @@ public class TcpListener extends Thread {
 							writer = new PrintWriter(cSocket.getOutputStream(), true);						
 							reader = new BufferedReader(new InputStreamReader(cSocket.getInputStream()));
 
+							//Michael started to code here
 							String message = "!msg " + client.getMessage();
 							File key = new File (client.getKey());
 							Key secretKey = Keys.readSecretKey(key);
@@ -86,12 +86,14 @@ public class TcpListener extends Thread {
 							hMac.init(secretKey);
 							hMac.update(Byte.parseByte(message));
 							byte[] hash = hMac.doFinal();
-							//TODO encode in Base64 and prepend to message
+							byte[] encodedHash = Base64.encode(hash);
 
-
+							message = encodedHash + message;
 							writer.println(message);
+							//Michael stopped coding here
 							awaitingMsg = true;
-							
+
+							//TODO check hash of !ack message
 							if (reader != null) {
 								String res = reader.readLine();
 								if(res.equals("!ack")) {
