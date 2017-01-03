@@ -8,6 +8,7 @@ import java.io.*;
 import java.net.Socket;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class TcpMsgHandler extends Thread {
@@ -37,27 +38,38 @@ public class TcpMsgHandler extends Thread {
 			String message;
 
 			while (!end && (message = reader.readLine()) != null) {
-
-				userResponseStream.println(message);
-				boolean tempered = false;
-
-				//TODO check message for tempering
-
-				String response = "!ack";
-				if (tempered) {
-					response = "!tempered " + message;
-				}
-
+				//Michael started coding here
 				File key = new File (client.getKey());
 				Key secretKey = Keys.readSecretKey(key);
 				Mac hMac = Mac.getInstance("HmacSHA256");
 				hMac.init(secretKey);
+
+
+				int index = message.indexOf("!msg");
+				String text = message.substring(index);
+				byte[] sentHash = message.substring(0,index).getBytes();
+				hMac.update(Byte.parseByte(text));
+				byte[] realHash = hMac.doFinal();
+				realHash = Base64.encode(realHash);
+				boolean tempered = MessageDigest.isEqual(sentHash, realHash);
+
+				String response = "!ack";
+
+				if (tempered) {
+					userResponseStream.println("The message received has been tempered with: " + text);
+					response = "!tempered " + message;
+				} else {
+					userResponseStream.println(message);
+				}
+
+
 				hMac.update(Byte.parseByte(response));
 				byte[] hash = hMac.doFinal();
 				byte[] encodedHash = Base64.encode(hash);
 
 				response = encodedHash + response;
 				writer.println(response);
+				//Michael ended coding here
 			}
 
 		} catch (IOException e) {
