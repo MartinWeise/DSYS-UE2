@@ -48,7 +48,7 @@ public class TcpMsgHandler extends Thread {
 				int index = message.indexOf("!msg");
 				String text = message.substring(index);
 				byte[] sentHash = message.substring(0,index).getBytes();
-				hMac.update(Byte.parseByte(text));
+				hMac.update(text.getBytes());
 				byte[] realHash = hMac.doFinal();
 				realHash = Base64.encode(realHash);
 				boolean tempered = MessageDigest.isEqual(sentHash, realHash);
@@ -63,7 +63,7 @@ public class TcpMsgHandler extends Thread {
 				}
 
 
-				hMac.update(Byte.parseByte(response));
+				hMac.update(response.getBytes());
 				byte[] hash = hMac.doFinal();
 				byte[] encodedHash = Base64.encode(hash);
 

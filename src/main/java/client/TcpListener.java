@@ -85,7 +85,7 @@ public class TcpListener extends Thread {
 							Key secretKey = Keys.readSecretKey(key);
 							Mac hMac = Mac.getInstance("HmacSHA256");
 							hMac.init(secretKey);
-							hMac.update(Byte.parseByte(message));
+							hMac.update(message.getBytes());
 							byte[] hash = hMac.doFinal();
 							byte[] encodedHash = Base64.encode(hash);
 
@@ -94,7 +94,6 @@ public class TcpListener extends Thread {
 
 							awaitingMsg = true;
 
-							//TODO check hash of !ack or !tempered message
 							if (reader != null) {
 								String res = reader.readLine();
 								int index = 0;
@@ -107,7 +106,7 @@ public class TcpListener extends Thread {
 
 								response = res.substring(index);
 								byte[] sentHash = res.substring(0,index).getBytes();
-								hMac.update(Byte.parseByte(response));
+								hMac.update(message.getBytes());
 								byte[] realHash = hMac.doFinal();
 								realHash = Base64.encode(realHash);
 								boolean tempered = MessageDigest.isEqual(sentHash, realHash);
