@@ -134,8 +134,10 @@ public class Client implements IClientCli, Runnable {
 	@Command
 	public String login(String username, String password) throws IOException {
 		// DONE Auto-generated method stub
-
-		out.println("!login " + username + " " + password);
+		
+		System.err.println("Command not supported! Please use: !authenticate <username>");
+		
+		//out.println("!login " + username + " " + password);
 
 		return null;
 	}

@@ -8,8 +8,11 @@
 ns-root:             !nameservers
 >                    verify("1. at\n 2. de")
 
-alice.vienna.at:	   !login alice.vienna.at 12345
->					      verify("success")
+alice.vienna.at:	!authenticate alice.vienna.at
+>					verify(".*a.*", T(test.util.Flag).REGEX)
+
+alice.vienna.at:	!list
+>					verify(".*alice.*", T(test.util.Flag).REGEX)
 
 alice.vienna.at:     !register localhost:8000
 >                    verify("Success")

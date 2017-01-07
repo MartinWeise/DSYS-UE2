@@ -6,11 +6,17 @@
 * Client		         alice.vienna.at
 * Client		         bill.de
 
-alice.vienna.at:	   !login alice.vienna.at 12345
->					      verify("success")
+alice.vienna.at:	!authenticate alice.vienna.at
+>					verify(".*a.*", T(test.util.Flag).REGEX)
 
-bill.de:             !login bill.de 23456
->                    verify("success")
+alice.vienna.at:	!list
+>					verify(".*alice.*", T(test.util.Flag).REGEX)
+
+bill.de:			!authenticate bill.de
+>					verify(".*b.*", T(test.util.Flag).REGEX)
+
+bill.de:			!list
+>					verify(".*bill.*", T(test.util.Flag).REGEX)
 
 alice.vienna.at:     !register localhost:8000
 >                    verify("Success")

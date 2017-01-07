@@ -96,7 +96,10 @@ public class TcpHandler extends Thread {
 
 
 				if (request.startsWith("!login")) {
-					if (parts.length > 3) {
+
+					System.err.println("Command not supported! Please use: !authenticate <username>");
+
+					/*if (parts.length > 3) {
 						response = "Command requires only two arguments: !login <username> <password>";
 					} else {
 						String name = parts[1];
@@ -123,7 +126,7 @@ public class TcpHandler extends Thread {
 						} else {
 							response = "Wrong username or password.";
 						}
-					}
+					}*/
 
 
 				} else if (request.startsWith("!logout")) {
@@ -278,13 +281,26 @@ public class TcpHandler extends Thread {
 
 						} else {
 							awaitingMessage = false;
-
-							//Authentication of the user succeeded
 							if (users.containsKey(username)) {
-								d = users.get(username);
-								users.put(d.getUserName(), d); //Update the value in the map
-								d.setOnlineStatus(true);
-								online = true;
+								if(!online) {
+									d = users.get(username);
+
+									synchronized (d) {
+										if(!d.getOnline()) {
+											//Authentication of the user succeeded
+											users.put(d.getUserName(), d);
+											d.setOnlineStatus(true);
+											online = true;
+
+										} else {
+											System.err.println("Authentication failed! User is online on another client!");
+										}
+									}
+								} else {
+									System.err.println("Authentication failed! Someone is already online on this client!");
+								}
+							} else {
+								System.err.println("Authentication failed! Unknown user!");
 							}
 						}
 
