@@ -313,7 +313,7 @@ public class Client implements IClientCli, Runnable {
 		//Read the private key of the user for the chatserver communication
 		String keyDir = config.getString("keys.dir");
 		try {
-			userPrivKey = Keys.readPrivatePEM(new File(keyDir + "/" + username + ".pem"));
+			userPrivKey = Keys.readPrivatePEM(new File(keyDir + File.separator + username + ".pem"));
 
 		} catch (IOException e) {
 			System.err.println("Failed to read the private key of " + username + "! " + e.getMessage());
@@ -340,7 +340,7 @@ public class Client implements IClientCli, Runnable {
 			//Prepare the message: !authenticate <username> <client-challenge>
 			String message = "!authenticate " + username + " " + encodedChallenge;
 
-			//Encrypt the overall message using RSA initialized with the chatserver�s public key
+			//Encrypt the overall message using RSA initialized with the chatservers public key
 			Cipher cipher = null;
 			byte[] encryptedMessage = null;
 			try {

@@ -67,7 +67,7 @@ public class Chatserver implements IChatserverCli, Runnable {
 		//Register the bouncy castle provider
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 		
-		//Read the user properties and save username and password to the user's hashmap
+		//Read the user properties and save username and password to the users hashmap
 		Config userProp = new Config("user");
 		Set<String> keys = userProp.listKeys();
 

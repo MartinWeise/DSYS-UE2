@@ -199,6 +199,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 					ns.registerUser(usernameZone, address);
 				}
 			} else {
+				userResponseStream.println("Registering private address '" + address + "' for user '" + username + "'.");
 				users.put(username, address);
 			}
 		} else {
@@ -220,6 +221,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 	public String lookup(String username) throws RemoteException {
 		userResponseStream.println("Lookup called on username '" + username + "'");
 		if (users.containsKey(username)) {
+			userResponseStream.println("Sending private address '" + users.get(username) + "'.");
 			return users.get(username);
 		} else {
 			return username + " is not registered.";

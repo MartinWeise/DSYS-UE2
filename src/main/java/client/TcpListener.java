@@ -98,6 +98,7 @@ public class TcpListener extends Thread {
 							if (reader != null) {
 								String res = reader.readLine();
 								int index = 0;
+								System.err.println("Response: '" + res + "'.");
 								if (res.contains("!tempered")) {
 									index = res.indexOf("!tempered");
 								} else if (res.contains("!ack")){

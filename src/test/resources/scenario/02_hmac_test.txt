@@ -1,0 +1,28 @@
+* Nameserver         ns-root
+* Nameserver         ns-de
+* Nameserver         ns-at
+* Nameserver         ns-vienna-at
+* Chatserver	      chatserver
+* Client		         alice.vienna.at
+* Client		         bill.de
+
+alice.vienna.at:	   !login alice.vienna.at 12345
+>					      verify("success")
+
+bill.de:             !login bill.de 23456
+>                    verify("success")
+
+alice.vienna.at:     !register localhost:8000
+>                    verify("Success")
+
+alice.vienna.at:     !send Hello everyone!
+
+bill.de:             !msg alice.vienna.at Hello Alice!
+
+alice.vienna.at:	   !exit
+bill.de:             !exit
+chatserver: 		   !exit
+ns-vienna-at:        !exit
+ns-at:               !exit
+ns-de:               !exit
+ns-root:             !exit

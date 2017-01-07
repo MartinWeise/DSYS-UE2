@@ -214,8 +214,6 @@ public class TcpHandler extends Thread {
 								String[] userParts = request.split("\\.");
 								/* begin from last, end at first */
 								for (int i = userParts.length - 1; i >= 1; i--) {
-									// TODO remove these type of info message?
-									System.out.println(i + ": " + userParts[i]);
 									remotens = remotens.getNameserver(userParts[i]);
 								}
 								String address = remotens.lookup(userParts[0].substring(17, userParts[0].length()));
@@ -316,7 +314,7 @@ public class TcpHandler extends Thread {
 								PublicKey userPubKey = null;
 								String keyDir = config.getString("keys.dir");
 								try {
-									userPubKey = Keys.readPublicPEM(new File(keyDir + "/" + username + ".pub.pem"));
+									userPubKey = Keys.readPublicPEM(new File(keyDir + File.separator + username + ".pub.pem"));
 
 								} catch (IOException e) {
 									System.err.println("Failed to read the public key of " + username + "! " + e.getMessage());
@@ -355,7 +353,7 @@ public class TcpHandler extends Thread {
 								//Prepare the response: !ok <client-challenge> <chatserver-challenge> <secret-key> <iv-parameter>
 								String message = "!ok " + clientChallenge + " " + serverChallenge + " " + secretKey + " " + IVparam;
 
-								//Encrypt the overall message using RSA initialized with the user’s public key
+								//Encrypt the overall message using RSA initialized with the user's public key
 								cipher = null;
 								byte[] encryptedMessage = null;
 								try {
