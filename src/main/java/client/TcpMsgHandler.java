@@ -47,17 +47,17 @@ public class TcpMsgHandler extends Thread {
 
 				int index = message.indexOf("!msg");
 				String text = message.substring(index);
-				byte[] sentHash = message.substring(0,index).getBytes();
+				byte[] sentHash = message.substring(0, index).getBytes();
 				hMac.update(text.getBytes());
 				byte[] realHash = hMac.doFinal();
 				realHash = Base64.encode(realHash);
-				boolean tempered = MessageDigest.isEqual(sentHash, realHash);
-
+				boolean tampered = MessageDigest.isEqual(sentHash, realHash);
+				
 				String response = "!ack";
 
-				if (tempered) {
-					userResponseStream.println("The message received has been tempered with: " + text);
-					response = "!tempered " + message;
+				if (tampered) {
+					userResponseStream.println("The message received has been tampered with: " + text);
+					response = "!tampered " + message;
 				} else {
 					userResponseStream.println(message);
 				}

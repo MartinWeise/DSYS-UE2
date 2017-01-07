@@ -24,7 +24,6 @@ public class TcpListener extends Thread {
 	private PrintStream userResponseStream;
 	private Client client;
 	private boolean end;
-	private boolean awaitingMsg;
 	private ServerSocket serverSocket;
 	private PrintWriter writer;
 	private BufferedReader reader;
@@ -40,7 +39,6 @@ public class TcpListener extends Thread {
 		this.threadPool = threadPool;
 		this.client = client;
 		this.end = false;
-		this.awaitingMsg = false;
 	}
 
 	public void run() {
@@ -92,31 +90,27 @@ public class TcpListener extends Thread {
 							message = encodedHash + message;
 							writer.println(message);
 
-							awaitingMsg = true;
-
 							if (reader != null) {
 								String res = reader.readLine();
 								int index = 0;
-								System.err.println("Response: '" + res + "'.");
-								if (res.contains("!tempered")) {
-									index = res.indexOf("!tempered");
+								if (res.contains("!tampered")) {
+									index = res.indexOf("!tampered");
 								} else if (res.contains("!ack")){
 									index = res.indexOf("!ack");
 								}
 
 								response = res.substring(index);
-								byte[] sentHash = res.substring(0,index).getBytes();
+								byte[] sentHash = res.substring(0, index).getBytes();
 								hMac.update(message.getBytes());
 								byte[] realHash = hMac.doFinal();
 								realHash = Base64.encode(realHash);
-								boolean tempered = MessageDigest.isEqual(sentHash, realHash);
+								boolean tampered = MessageDigest.isEqual(sentHash, realHash);
 
-								if (tempered) {
-									System.out.println("The message received has been tempered with: " + response);
+								if (tampered) {
+									System.out.println("The message received has been tampered with: " + response);
 								}
 
-								if(response.equals("!ack") || response.contains("!tempered")) {
-									awaitingMsg = false;
+								if(response.equals("!ack") || response.contains("!tampered")) {
 									cSocket.close();
 								}
 								//Michael stopped coding here
@@ -139,15 +133,6 @@ public class TcpListener extends Thread {
 					}
 				} else if (response != null && response.startsWith("!tinkered")) {
 					out.println("Last message sent was manipulated");
-				}
-				
-				if(awaitingMsg && reader != null) {
-					String res = reader.readLine();
-					if(res.equals("!ack")) {
-						awaitingMsg = false;
-						response = res;
-						cSocket.close();
-					}
 				}
 
 				if(response != null && response.equals("Server closed.")) {
