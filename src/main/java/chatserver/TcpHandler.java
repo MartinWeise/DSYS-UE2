@@ -69,7 +69,7 @@ public class TcpHandler extends Thread {
 		this.config = config;
 		this.online = false;
 
-		//Read the chatserver's private key for the client communication
+		//Read the chatservers private key for the client communication
 		String key = config.getString("key");
 		try {
 			privKey = Keys.readPrivatePEM(new File(key));
@@ -89,47 +89,18 @@ public class TcpHandler extends Thread {
 			String request;
 
 			while (!end && (request = reader.readLine()) != null) {
-
+				
 				userResponseStream.println("Client: " + request);
+				String response = "";
+				
+				//Decode the message from the client
+				byte[] decodedMessage = Base64.decode(request);				
+				request = new String(decodedMessage, "UTF-8");
+
 				String[] parts = request.split("\\s");
-				String response = "Command not available!";
-
-
-				if (request.startsWith("!login")) {
-
-					System.err.println("Command not supported! Please use: !authenticate <username>");
-
-					/*if (parts.length > 3) {
-						response = "Command requires only two arguments: !login <username> <password>";
-					} else {
-						String name = parts[1];
-						String password = parts[2];
-
-						if (users.containsKey(name)) {
-							d = users.get(name);
-
-							synchronized (d) {
-								if (d.getOnline()) {
-									response = "Already logged in.";
-								} else {
-									if (!d.getUserPW().equals(password)) {
-										response = "Wrong username or password.";
-									} else {
-										d.setOnlineStatus(true);
-										online = true;
-										users.put(d.getUserName(), d); //Update the value in the map
-										response = "Successfully logged in.";
-									}
-								}
-							}
-
-						} else {
-							response = "Wrong username or password.";
-						}
-					}*/
-
-
-				} else if (request.startsWith("!logout")) {
+				
+				
+				 if (request.startsWith("!logout")) {
 					if (parts.length > 1) {
 						response = "Command doesn't require any arguments: !logout";
 					} else {
@@ -257,10 +228,6 @@ public class TcpHandler extends Thread {
 
 
 				} else {
-
-					//Decode the message
-					byte[] decodedMessage = Base64.decode(request);
-					response = "";
 
 					if(awaitingMessage) {
 						//Decrypt the message using AES

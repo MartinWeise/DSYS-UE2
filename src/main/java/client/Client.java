@@ -137,8 +137,6 @@ public class Client implements IClientCli, Runnable {
 		
 		System.err.println("Command not supported! Please use: !authenticate <username>");
 		
-		//out.println("!login " + username + " " + password);
-
 		return null;
 	}
 
@@ -147,7 +145,9 @@ public class Client implements IClientCli, Runnable {
 	public String logout() throws IOException {
 		// DONE Auto-generated method stub
 
-		out.println("!logout");
+		String str = "!logout";
+		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
+		out.println(encodedMessage);
 
 		return null;
 	}
@@ -157,7 +157,9 @@ public class Client implements IClientCli, Runnable {
 	public String send(String message) throws IOException {
 		// DONE Auto-generated method stub
 
-		out.println("!send " + message);
+		String str = "!send " + message;
+		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
+		out.println(encodedMessage);
 
 		return null;
 	}
@@ -185,8 +187,10 @@ public class Client implements IClientCli, Runnable {
 
 		setMessage(message);
 		setReceiver(username);
-		out.println("!lookup private+ " + username);
-
+		String str = "!lookup private+ " + username;
+		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
+		out.println(encodedMessage);
+		
 		return null;
 	}
 
@@ -195,7 +199,9 @@ public class Client implements IClientCli, Runnable {
 	public String lookup(String username) throws IOException {
 		// DONE Auto-generated method stub
 
-		out.println("!lookup " + username);
+		String str = "!lookup " + username;
+		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
+		out.println(encodedMessage);
 
 		return null;
 	}
@@ -205,7 +211,10 @@ public class Client implements IClientCli, Runnable {
 	public String register(String privateAddress) throws IOException {
 		// DONE Auto-generated method stub
 
-		out.println("!register " + privateAddress);
+		String str = "!register " + privateAddress;
+		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
+		out.println(encodedMessage);
+		
 		String[] p = privateAddress.split(":");
 		setPort(Integer.parseInt(p[1]));
 
@@ -217,7 +226,9 @@ public class Client implements IClientCli, Runnable {
 	public String lastMsg() throws IOException {
 		// DONE Auto-generated method stub
 
-		out.println("!lastMsg");
+		String str = "!lastMsg";
+		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
+		out.println(encodedMessage);
 
 		return null;
 	}
@@ -227,14 +238,12 @@ public class Client implements IClientCli, Runnable {
 	public String exit() throws IOException {
 		// DONE Auto-generated method stub
 
-		out.println("!logout");
-
+		logout();
 		userResponseStream.println("Exiting client.");
 
 		if(shell != null) {
 			shell.close();
 		}
-
 		if(socket != null && !socket.isClosed()) {
 			socket.close();
 		}
