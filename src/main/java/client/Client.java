@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -61,6 +62,8 @@ public class Client implements IClientCli, Runnable {
 	private TcpListener clListener;
 	private int port;
 	private UdpListener udpListener;
+	private byte[] decIV;
+	private SecretKey sKey;
 
 	/**
 	 * @param componentName
@@ -134,10 +137,40 @@ public class Client implements IClientCli, Runnable {
 	@Command
 	public String login(String username, String password) throws IOException {
 		// DONE Auto-generated method stub
-		
+
 		System.err.println("Command not supported! Please use: !authenticate <username>");
-		
+
 		return null;
+	}
+
+	
+	public void encryptEncodeAndSendToServer(String message) {
+
+		//Encrypt the message using AES initialized with the <secret-key> and the <iv-parameter>
+		Cipher cipher = null;
+		byte[] encryptedMessage = null;
+		try {
+			cipher = Cipher.getInstance("AES/CTR/NoPadding");
+			cipher.init(Cipher.ENCRYPT_MODE, sKey, new IvParameterSpec(decIV));
+			encryptedMessage = cipher.doFinal(message.getBytes("UTF-8"));
+
+		} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
+			System.err.println("Failed to encrypt the message of the client! " + e.getMessage());
+		}
+		
+		//Encode the ciphertext using Base64
+		String encodedCipher = null;
+		try {
+			encodedCipher = new String(Base64.encode((encryptedMessage)), "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			System.err.println("Failed to encode the message of the client! " + e.getMessage());
+		}
+		
+		//Send the encoded ciphertext to the server
+		if(!encodedCipher.equals(null)) {
+			out.println(encodedCipher);
+		}
+
 	}
 
 	@Override
@@ -145,10 +178,8 @@ public class Client implements IClientCli, Runnable {
 	public String logout() throws IOException {
 		// DONE Auto-generated method stub
 
-		String str = "!logout";
-		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
-		out.println(encodedMessage);
-
+		encryptEncodeAndSendToServer("!logout");
+		
 		return null;
 	}
 
@@ -157,9 +188,7 @@ public class Client implements IClientCli, Runnable {
 	public String send(String message) throws IOException {
 		// DONE Auto-generated method stub
 
-		String str = "!send " + message;
-		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
-		out.println(encodedMessage);
+		encryptEncodeAndSendToServer("!send " + message);
 
 		return null;
 	}
@@ -187,10 +216,8 @@ public class Client implements IClientCli, Runnable {
 
 		setMessage(message);
 		setReceiver(username);
-		String str = "!lookup private+ " + username;
-		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
-		out.println(encodedMessage);
-		
+		encryptEncodeAndSendToServer("!lookup private+ " + username);
+
 		return null;
 	}
 
@@ -199,9 +226,7 @@ public class Client implements IClientCli, Runnable {
 	public String lookup(String username) throws IOException {
 		// DONE Auto-generated method stub
 
-		String str = "!lookup " + username;
-		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
-		out.println(encodedMessage);
+		encryptEncodeAndSendToServer("!lookup " + username);
 
 		return null;
 	}
@@ -211,10 +236,8 @@ public class Client implements IClientCli, Runnable {
 	public String register(String privateAddress) throws IOException {
 		// DONE Auto-generated method stub
 
-		String str = "!register " + privateAddress;
-		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
-		out.println(encodedMessage);
-		
+		encryptEncodeAndSendToServer("!register " + privateAddress);
+
 		String[] p = privateAddress.split(":");
 		setPort(Integer.parseInt(p[1]));
 
@@ -226,9 +249,7 @@ public class Client implements IClientCli, Runnable {
 	public String lastMsg() throws IOException {
 		// DONE Auto-generated method stub
 
-		String str = "!lastMsg";
-		String encodedMessage = new String(Base64.encode((str.getBytes("UTF-8"))), "UTF-8");
-		out.println(encodedMessage);
+		encryptEncodeAndSendToServer("!lastMsg");
 
 		return null;
 	}
@@ -239,7 +260,6 @@ public class Client implements IClientCli, Runnable {
 		// DONE Auto-generated method stub
 
 		logout();
-		userResponseStream.println("Exiting client.");
 
 		if(shell != null) {
 			shell.close();
@@ -268,7 +288,7 @@ public class Client implements IClientCli, Runnable {
 
 		threadPool.shutdown();
 
-		return null;
+		return "Exiting client";
 	}
 
 	public String getReceiver() {
@@ -405,26 +425,11 @@ public class Client implements IClientCli, Runnable {
 				} else {
 					//Decode the secret-key and IV-paramter
 					byte[] decSecretKey = Base64.decode(secretKey);
-					SecretKey sKey = new SecretKeySpec(decSecretKey, 0, decSecretKey.length, "AES");
-					byte[] decIV = Base64.decode(IVparam);
+					sKey = new SecretKeySpec(decSecretKey, 0, decSecretKey.length, "AES");
+					decIV = Base64.decode(IVparam);
 
-					//Encrypt the <chatserver-challenge> using AES initialized with the <secret-key> and the <iv-parameter>
-					cipher = null;
-					encryptedMessage = null;
-					try {
-						cipher = Cipher.getInstance("AES/CTR/NoPadding");
-						cipher.init(Cipher.ENCRYPT_MODE, sKey, new IvParameterSpec(decIV));
-						encryptedMessage = cipher.doFinal(chatserverChallenge.getBytes("UTF-8"));
-
-					} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
-						System.err.println("Failed to encrypt the third message! " + e.getMessage());
-					}
-
-					//Encode the ciphertext using Base64
-					encodedCipher = Base64.encode(encryptedMessage);
-
-					//Send the message to the chatserver
-					out.println(new String(encodedCipher, "UTF-8"));
+					//Encrypt the <chatserver-challenge> using AES, encode it using Base64 and send it to the server
+					encryptEncodeAndSendToServer(chatserverChallenge);
 
 				}
 			}
