@@ -87,7 +87,7 @@ public class TcpListener extends Thread {
 							byte[] hash = hMac.doFinal();
 							byte[] encodedHash = Base64.encode(hash);
 
-							message = new String(encodedHash, "UTF-8") + message;
+							message = new String(encodedHash, "UTF-8").concat(message);
 							writer.println(message);
 
 							if (reader != null) {
@@ -98,10 +98,10 @@ public class TcpListener extends Thread {
 								} else if (res.contains("!ack")){
 									index = res.indexOf("!ack");
 								}
-
+								String text = res.substring(index);
 								response = res.substring(index);
 								byte[] sentHash = res.substring(0, index).getBytes("UTF-8");
-								hMac.update(message.getBytes("UTF-8"));
+								hMac.update(text.getBytes("UTF-8"));
 								byte[] realHash = hMac.doFinal();
 								realHash = Base64.encode(realHash);
 								boolean hash_ok = MessageDigest.isEqual(sentHash, realHash);
