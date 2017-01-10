@@ -47,19 +47,19 @@ public class TcpMsgHandler extends Thread {
 
 				int index = message.indexOf("!msg");
 				String text = message.substring(index);
-				byte[] sentHash = message.substring(0, index).getBytes();
-				hMac.update(text.getBytes());
+				byte[] sentHash = message.substring(0, index).getBytes("UTF-8");
+				hMac.update(text.getBytes("UTF-8"));
 				byte[] realHash = hMac.doFinal();
 				realHash = Base64.encode(realHash);
-				boolean tampered = MessageDigest.isEqual(sentHash, realHash);
+				boolean hash_ok = MessageDigest.isEqual(sentHash, realHash);
 				
 				String response = "!ack";
 
-				if (tampered) {
+				if (!hash_ok) {
 					userResponseStream.println("The message received has been tampered with: " + text);
-					response = "!tampered " + message;
+					response = "!tampered " + text;
 				} else {
-					userResponseStream.println(message);
+					userResponseStream.println(text);
 				}
 
 
@@ -67,7 +67,7 @@ public class TcpMsgHandler extends Thread {
 				byte[] hash = hMac.doFinal();
 				byte[] encodedHash = Base64.encode(hash);
 
-				response = encodedHash + response;
+				response = new String(encodedHash, "UTF-8") + response;
 				writer.println(response);
 				//Michael ended coding here
 			}

@@ -83,11 +83,11 @@ public class TcpListener extends Thread {
 							Key secretKey = Keys.readSecretKey(key);
 							Mac hMac = Mac.getInstance("HmacSHA256");
 							hMac.init(secretKey);
-							hMac.update(message.getBytes());
+							hMac.update(message.getBytes("UTF-8"));
 							byte[] hash = hMac.doFinal();
 							byte[] encodedHash = Base64.encode(hash);
 
-							message = encodedHash + message;
+							message = new String(encodedHash, "UTF-8") + message;
 							writer.println(message);
 
 							if (reader != null) {
@@ -100,13 +100,13 @@ public class TcpListener extends Thread {
 								}
 
 								response = res.substring(index);
-								byte[] sentHash = res.substring(0, index).getBytes();
-								hMac.update(message.getBytes());
+								byte[] sentHash = res.substring(0, index).getBytes("UTF-8");
+								hMac.update(message.getBytes("UTF-8"));
 								byte[] realHash = hMac.doFinal();
 								realHash = Base64.encode(realHash);
-								boolean tampered = MessageDigest.isEqual(sentHash, realHash);
+								boolean hash_ok = MessageDigest.isEqual(sentHash, realHash);
 
-								if (tampered) {
+								if (!hash_ok) {
 									System.out.println("The message received has been tampered with: " + response);
 								}
 
