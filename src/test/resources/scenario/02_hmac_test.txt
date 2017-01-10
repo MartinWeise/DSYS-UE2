@@ -6,24 +6,28 @@
 * Client		         alice.vienna.at
 * Client		         bill.de
 
-alice.vienna.at:	!authenticate alice.vienna.at
->					verify(".*a.*", T(test.util.Flag).REGEX)
+alice.vienna.at:     !authenticate alice.vienna.at
+>                    verify(".*a.*", T(test.util.Flag).REGEX)
 
-alice.vienna.at:	!list
->					verify(".*alice.*", T(test.util.Flag).REGEX)
+alice.vienna.at:     !list
+>                    verify(".*alice.*", T(test.util.Flag).REGEX)
 
-bill.de:			!authenticate bill.de
->					verify(".*b.*", T(test.util.Flag).REGEX)
+bill.de:             !authenticate bill.de
+>                    verify(".*b.*", T(test.util.Flag).REGEX)
 
-bill.de:			!list
->					verify(".*bill.*", T(test.util.Flag).REGEX)
+bill.de:             !list
+>                    verify(".*bill.*", T(test.util.Flag).REGEX)
 
 alice.vienna.at:     !register localhost:8000
 >                    verify("Success")
 
 alice.vienna.at:     !send Hello everyone!
 
+bill.de:             !lastMsg
+>                    verify("Hello everyone!")
+
 bill.de:             !msg alice.vienna.at Hello Alice!
+>                    verify("Response: !ack")
 
 alice.vienna.at:	   !exit
 bill.de:             !exit

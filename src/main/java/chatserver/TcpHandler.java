@@ -298,9 +298,12 @@ public class TcpHandler extends Thread {
 									if (!parts[1].contains(":")) {
 										response = "Wrong address format: <IP:port>";
 									} else {
+										/* Get the registry from the root-ns */
 										Registry registry = LocateRegistry.getRegistry(config.getString("registry.host"),
 												config.getInt("registry.port"));
+										/* Get root-ns RMI object from registry */
 										INameserver rootns = (INameserver) registry.lookup(config.getString("root_id"));
+										/** Invoke local method {@link nameserver.Nameserver#registerNameserver} on root-ns which then forwards the request in a recursive manner. */
 										rootns.registerUser(d.getUserName(), parts[1]);
 										d.setPrivateAdress(parts[1]);
 										response = "Successfully registered address for " + d.getUserName() + ".";
@@ -328,8 +331,11 @@ public class TcpHandler extends Thread {
 										String[] userParts = request.split("\\.");
 										/* begin from last, end at first */
 										for (int i = userParts.length - 1; i >= 1; i--) {
+											/** Get the nameserver in a iterative manner, on which the user should be registered
+											 * {@link nameserver.Nameserver#getNameserver}. */
 											remotens = remotens.getNameserver(userParts[i]);
 										}
+										/* return the private address from the corresponding bottom-ns. */
 										String address = remotens.lookup(userParts[0].substring(17, userParts[0].length()));
 										response = "private+ " + address;
 										userResponseStream.println("Resolved implicite lookup '" + address + "'");
@@ -349,7 +355,6 @@ public class TcpHandler extends Thread {
 							} else {
 								response = "Not logged in.";
 							}
-
 
 						} else if (request.startsWith("!lastMsg")) {
 							if (online) {

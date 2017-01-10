@@ -58,6 +58,9 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 	}
 
 	/**
+	 * @brief Entry point of the program.
+	 * @details Creates a registry at the root-nameserver, and retrieve it on other nameservers.
+	 *          Register the other nameservers to the registry.
 	 * Register the root {@link INameserver} and bind the nameserverRemote {@link INameserver} to it
 	 * Mostly from Oracle RMI docs
 	 */
@@ -70,11 +73,13 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 				/* component is non-root */
 				registry = LocateRegistry.getRegistry(config.getString("registry.host"), config.getInt("registry.port"));
 				INameserver root = (INameserver) registry.lookup(config.getString("root_id"));
+				/* export the registerNameserver(...) function to the registry */
 				INameserver nameserverRemote = (INameserver) UnicastRemoteObject.exportObject(this, 0);
 				root.registerNameserver(config.getString("domain"), nameserverRemote, nameserverRemote);
 			} else {
 				/* component is root */
 				registry = LocateRegistry.createRegistry(config.getInt("registry.port"));
+				/* export the registerNameserver(...) function to the registry */
 				INameserver nameserverRemote = (INameserver) UnicastRemoteObject.exportObject(this, 0);
 				registry.bind(config.getString("root_id"), nameserverRemote);
 			}
@@ -88,7 +93,8 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 	}
 
 	/**
-	 * Method for listing nameservers {@link ConcurrentHashMap<String,INameserver>} from view of the current one.
+	 * @brief Method for listing nameservers {@link #subzones} from view of the current nameserver.
+	 * @details Entries are sorted alphabetically.
 	 * @return List of registered nameservers
      */
 	@Override
@@ -110,6 +116,11 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 		return out;
 	}
 
+	/**
+	 * @brief Prints String of registered users in the current nameserver.
+	 * @details Entries are sorted alphabetically.
+	 * @return List of registered private addresses of users.
+     */
 	@Override
 	@Command
 	public String addresses() {
@@ -120,7 +131,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 		for (Map.Entry<String, String> u : users.entrySet()) {
 			temp.add(u.getKey() + " " + u.getValue());
 		}
-		/* sort */
+		/* sort entries A-Z */
 		Collections.sort(temp);
 		/* build output string */
 		for (String line : temp) {
@@ -129,6 +140,11 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 		return out;
 	}
 
+	/**
+	 * @brief Shutdown the server.
+	 * @details Unbinds the nameservers from the registry and remove all RMI objects.
+	 * @return Debug message of the completion and component name.
+     */
 	@Override
 	@Command
 	public String exit() throws IOException {
@@ -136,7 +152,6 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 		if (componentName.equals("ns-root")) {
 			try {
 				registry.unbind(config.getString("root_id"));
-				// TODO: keep this sort of info?
 				System.out.println("Unbinding of component " + componentName + " successful.");
 			} catch (NotBoundException e) {
 				System.err.println("exit: " + e.getMessage());
@@ -157,14 +172,22 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 	 *            component
 	 */
 	public static void main(String[] args) {
-		Nameserver nameserver = new Nameserver(args[0], new Config(args[0]),
-				System.in, System.out);
-		// TODO: start the nameserver
+		Nameserver nameserver = new Nameserver(args[0], new Config(args[0]), System.in, System.out);
 		nameserver.run();
 	}
 
+	/**
+	 * @brief Registers a new nameserver {@link INameserver} in a recursive style.
+	 * @param domain Name of the component that likes to register.
+	 * @param nameserver The nameserver remote object that should be bound.
+	 * @param nameserverForChatserver The nameserver object that should be bound for the chatserver.
+	 * @throws RemoteException When the registering of the nameserver fails.
+	 * @throws AlreadyRegisteredException When the nameserver already exists in the registry.
+	 * @throws InvalidDomainException When the {@param domain} name is malformed.
+     */
 	@Override
-	public void registerNameserver(String domain, INameserver nameserver, INameserverForChatserver nameserverForChatserver) throws RemoteException, AlreadyRegisteredException, InvalidDomainException {
+	public void registerNameserver(String domain, INameserver nameserver, INameserverForChatserver nameserverForChatserver)
+			throws RemoteException, AlreadyRegisteredException, InvalidDomainException {
 		if (domain.matches("[A-z0-9.]+")) {
 			/* domain is valid */
 			if (domain.contains(".")) {
@@ -173,6 +196,7 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 				String nameServerDomain = domain.substring(domain.lastIndexOf('.') + 1);
 				INameserver ns = subzones.get(nameServerDomain);
 				if (ns != null) {
+					/* forward request in a recursive manner */
 					ns.registerNameserver(zone, nameserver, nameserverForChatserver);
 				}
 			} else if (subzones.containsKey(domain)) {
@@ -186,8 +210,18 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 		}
 	}
 
+	/**
+	 * @brief Registers a new user at a nameserver.
+	 * @details The nameserver that is chosen depends on the {@param username}.
+	 * @param username The username of a user.
+	 * @param address The private address of a user.
+	 * @throws RemoteException When the registering of the nameserver fails.
+	 * @throws AlreadyRegisteredException When the nameserver already exists in the registry.
+	 * @throws InvalidDomainException When the {@param domain} name is malformed.
+     */
 	@Override
-	public void registerUser(String username, String address) throws RemoteException, AlreadyRegisteredException, InvalidDomainException {
+	public void registerUser(String username, String address) throws RemoteException, AlreadyRegisteredException,
+			InvalidDomainException {
 		if (username.matches("[A-z0-9.]+")) {
 			/* username is valid */
 			if (username.contains(".")) {
@@ -207,6 +241,13 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 		}
 	}
 
+	/**
+	 * @brief Gets a nameserver from the local {@link #subzones}.
+	 * @details If not present, a {@link RemoteException} is thrown.
+	 * @param zone Name of the server that should be found.
+	 * @return Nameserver object for the chatserver.
+	 * @throws RemoteException Thrown when the requested nameserver is not found.
+     */
 	@Override
 	public INameserverForChatserver getNameserver(String zone) throws RemoteException {
 		if (subzones.containsKey(zone)) {
@@ -217,8 +258,14 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 		}
 	}
 
+	/**
+	 * @brief Gets a nameserver from the local {@link #users}.
+	 * @details If not present, a debug message is returned.
+	 * @param username Name of the user that should be found.
+	 * @return String containing the private address on succes, error message otherwise.
+	 */
 	@Override
-	public String lookup(String username) throws RemoteException {
+	public String lookup(String username) {
 		userResponseStream.println("Lookup called on username '" + username + "'");
 		if (users.containsKey(username)) {
 			userResponseStream.println("Sending private address '" + users.get(username) + "'.");
