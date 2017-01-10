@@ -63,7 +63,7 @@ public class TcpMsgHandler extends Thread {
 				}
 
 
-				hMac.update(response.getBytes());
+				hMac.update(response.getBytes("UTF-8"));
 				byte[] hash = hMac.doFinal();
 				byte[] encodedHash = Base64.encode(hash);
 
