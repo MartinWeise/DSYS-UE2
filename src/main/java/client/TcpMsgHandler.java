@@ -39,21 +39,28 @@ public class TcpMsgHandler extends Thread {
 
 			while (!end && (message = reader.readLine()) != null) {
 				//Michael started coding here
+				//Read the Key from file.
 				File key = new File (client.getKey());
 				Key secretKey = Keys.readSecretKey(key);
+
+				//Initiate Mac
 				Mac hMac = Mac.getInstance("HmacSHA256");
 				hMac.init(secretKey);
 
+				//split message and hash
 				int index = message.indexOf("!msg");
 				String text = message.substring(index);
 				byte[] sentHash = message.substring(0, index).getBytes("UTF-8");
+
+				//compute hash of message
 				hMac.update(text.getBytes("UTF-8"));
 				byte[] realHash = hMac.doFinal();
+				//compare Hashes
 				realHash = Base64.encode(realHash);
 				boolean hash_ok = MessageDigest.isEqual(sentHash, realHash);
 
+				//set response
 				String response;
-
 				if (!hash_ok) {
 					userResponseStream.println("The message received has been tampered with: " + text);
 					response = "!tampered " + text;
@@ -62,10 +69,10 @@ public class TcpMsgHandler extends Thread {
 					response = "!ack";
 				}
 
+				//compute hash of response and prepend
 				hMac.update(response.getBytes("UTF-8"));
 				byte[] hash = hMac.doFinal();
 				byte[] encodedHash = Base64.encode(hash);
-
 				response = new String(encodedHash, "UTF-8").concat(response);
 				writer.println(response);
 				//Michael ended coding here

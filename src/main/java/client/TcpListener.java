@@ -79,14 +79,21 @@ public class TcpListener extends Thread {
 
 							//Michael started to code here
 							String message = "!msg " + client.getMessage();
+
+							//read Key from File
 							File key = new File (client.getKey());
 							Key secretKey = Keys.readSecretKey(key);
+
+							//initialise Mac
 							Mac hMac = Mac.getInstance("HmacSHA256");
 							hMac.init(secretKey);
+
+							//calculate hash
 							hMac.update(message.getBytes("UTF-8"));
 							byte[] hash = hMac.doFinal();
 							byte[] encodedHash = Base64.encode(hash);
 
+							//prepend hash to message
 							message = new String(encodedHash, "UTF-8").concat(message);
 							writer.println(message);
 
@@ -98,11 +105,17 @@ public class TcpListener extends Thread {
 								} else if (res.contains("!ack")){
 									index = res.indexOf("!ack");
 								}
+
+								//split hash from message
 								String text = res.substring(index);
 								response = res.substring(index);
 								byte[] sentHash = res.substring(0, index).getBytes("UTF-8");
+
+								//calculate hash from message
 								hMac.update(text.getBytes("UTF-8"));
 								byte[] realHash = hMac.doFinal();
+
+								//compare hashes
 								realHash = Base64.encode(realHash);
 								boolean hash_ok = MessageDigest.isEqual(sentHash, realHash);
 
