@@ -16,9 +16,9 @@ nameserver/Nameserver.java: Hier erfolgt die Ausgabe der bekannten Zonen, der ge
 
 Stage 2:
 
-client/Client.java: Die erste Nachricht des Authentifizierungsalgorithmus wird hier vorbereitet, RSA verschlüsselt und Base64 codiert an den Server uebermittelt. Die dritte Nachricht wird hier empfangen, und die erhaltene mit client-challenges wird mit der gesendeten verglichen. Bei Übereinstimmung wird die chatserver-challenge AES verschlüsselt und Base64 codiert an den Serer geschickt.
+client/Client.java: Die erste Nachricht des Authentifizierungsalgorithmus wird hier vorbereitet, RSA verschluesselt und Base64 codiert an den Server uebermittelt. Die dritte Nachricht wird hier empfangen, und die erhaltene client-challenge wird mit der gesendeten verglichen. Bei Uebereinstimmung wird die chatserver-challenge AES verschluesselt und Base64 codiert an den Server verschickt.
 
-chatserver/TcpHandler.java: Alle Nachrichten werden hier empfangen, Base64 encodiert, RSA oder AES entschlüsselt und entsprechend bearbeitet. Wenn die Authentifizierung beim Vergleich der gesendeten und erhaltenen chatserver-challenges fehlschlägt, so wird beim Server eine entsprechende Nachricht ausgegeben.
+chatserver/TcpHandler.java: Alle Nachrichten werden hier empfangen, Base64 encodiert, RSA oder AES entschluesselt und entsprechend bearbeitet. Wenn die Authentifizierung beim Vergleich der gesendeten und erhaltenen chatserver-challenges fehlschlaegt, so wird beim Server eine entsprechende Nachricht ausgegeben.
 
 
 Stage 3:
