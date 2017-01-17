@@ -347,7 +347,6 @@ public class TcpHandler extends Thread {
 									String[] userParts = request.split("\\.");
 									/* begin from last, end at first */
 									for (int i = userParts.length - 1; i >= 1; i--) {
-										System.out.println(i + ": " + userParts[i]);
 										remotens = remotens.getNameserver(userParts[i]);
 									}
 									response = remotens.lookup(userParts[0].substring(8, userParts[0].length()));

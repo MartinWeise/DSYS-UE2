@@ -163,6 +163,13 @@ public class Nameserver implements INameserver, INameserverCli, Runnable {
 				throw new RuntimeException("Failed to unexport component " + componentName);
 			}
 		}
+		/* remove registry at last */
+		if (!UnicastRemoteObject.unexportObject(registry, false)) {
+			/* now force it */
+			if (!UnicastRemoteObject.unexportObject(registry, true)) {
+				throw new RuntimeException("Failed to unexport registry.");
+			}
+		}
 		return "Shutdown of " + componentName + " completed";
 	}
 
